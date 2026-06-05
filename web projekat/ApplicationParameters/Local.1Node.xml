@@ -1,6 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Application Name="fabric:/web_projekat" xmlns="http://schemas.microsoft.com/2011/01/fabric" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<Application xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Name="fabric:/web_projekat" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
-    <Parameter Name="Web1_ASPNETCORE_ENVIRONMENT" Value="Development" />
+    <Parameter Name="Gateway_ASPNETCORE_ENVIRONMENT" Value="Development" />
+    <Parameter Name="AuthService_ASPNETCORE_ENVIRONMENT" Value="Development" />
+    <Parameter Name="TravelService_ASPNETCORE_ENVIRONMENT" Value="Development" />
+    <Parameter Name="BudgetService_ASPNETCORE_ENVIRONMENT" Value="Development" />
   </Parameters>
 </Application>
