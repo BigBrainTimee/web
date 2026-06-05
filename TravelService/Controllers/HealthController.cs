@@ -1,8 +1,10 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace TravelService.Controllers;
 
 [ApiController]
+[AllowAnonymous]
 [Route("api/travel")]
 public class HealthController : ControllerBase
 {

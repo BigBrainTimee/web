@@ -1,0 +1,36 @@
+@baseUrl = http://localhost:8080/api/travel
+@token = your_jwt_token_here
+
+### Health (no token)
+GET {{baseUrl}}/health
+
+### List travel plans
+GET {{baseUrl}}/travel-plans
+Authorization: Bearer {{token}}
+
+### Create travel plan
+POST {{baseUrl}}/travel-plans
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Leto u Grckoj",
+  "description": "Odmor na Kritu",
+  "startDate": "2026-07-01",
+  "endDate": "2026-07-14",
+  "plannedBudget": 1500,
+  "notes": "Rezervisati let"
+}
+
+### Add destination
+POST {{baseUrl}}/travel-plans/1/destinations
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Heraklion",
+  "location": "Kreta, Grcka",
+  "arrivalDate": "2026-07-01",
+  "departureDate": "2026-07-07",
+  "description": "Prva destinacija"
+}

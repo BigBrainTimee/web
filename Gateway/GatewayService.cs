@@ -60,6 +60,15 @@ internal sealed class GatewayService : StatelessService
                         });
 
                     builder.Services.AddAuthorization();
+                    builder.Services.AddCors(options =>
+                    {
+                        options.AddPolicy("Frontend", policy =>
+                        {
+                            policy.WithOrigins("http://localhost:5173", "http://127.0.0.1:5173")
+                                .AllowAnyHeader()
+                                .AllowAnyMethod();
+                        });
+                    });
                     builder.Services.AddControllers();
                     builder.Services.AddReverseProxy()
                         .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
@@ -72,6 +81,7 @@ internal sealed class GatewayService : StatelessService
 
                     var app = builder.Build();
 
+                    app.UseCors("Frontend");
                     app.UseAuthentication();
                     app.UseMiddleware<JwtGatewayMiddleware>();
                     app.UseAuthorization();
