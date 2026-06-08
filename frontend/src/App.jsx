@@ -5,6 +5,7 @@ import { AuthProvider } from './context/AuthContext';
 import CreateTravelPlanPage from './pages/CreateTravelPlanPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import SharedPlanPage from './pages/SharedPlanPage';
 import TravelPlanDetailPage from './pages/TravelPlanDetailPage';
 import TravelPlansPage from './pages/TravelPlansPage';
 
@@ -32,6 +33,7 @@ export default function App() {
               </ProtectedRoute>
             )}
           />
+          <Route path="/shared/:token" element={<SharedPlanPage />} />
           <Route
             path="/plans/:id"
             element={(

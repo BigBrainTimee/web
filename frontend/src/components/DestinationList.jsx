@@ -1,4 +1,4 @@
-export default function DestinationList({ destinations, onDelete }) {
+export default function DestinationList({ destinations, onDelete, readOnly = false }) {
   if (destinations.length === 0) {
     return <p className="muted">Još nema destinacija za ovaj plan.</p>;
   }
@@ -15,6 +15,7 @@ export default function DestinationList({ destinations, onDelete }) {
             </p>
             {destination.description && <p>{destination.description}</p>}
           </div>
+          {!readOnly && onDelete && (
           <button
             type="button"
             className="btn btn-danger"
@@ -22,6 +23,7 @@ export default function DestinationList({ destinations, onDelete }) {
           >
             Obriši
           </button>
+          )}
         </article>
       ))}
     </div>

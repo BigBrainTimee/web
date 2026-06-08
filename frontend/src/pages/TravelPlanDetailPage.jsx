@@ -10,6 +10,7 @@ import ExpenseForm from '../components/ExpenseForm';
 import ExpenseList from '../components/ExpenseList';
 import DestinationForm from '../components/DestinationForm';
 import DestinationList from '../components/DestinationList';
+import ShareLinkPanel from '../components/ShareLinkPanel';
 import TravelPlanForm from '../components/TravelPlanForm';
 import { useAuth } from '../context/AuthContext';
 import { ApiError } from '../services/apiClient';
@@ -254,6 +255,11 @@ export default function TravelPlanDetailPage() {
         <h2>Aktivnosti po danima</h2>
         <ActivityList activities={activities} onDelete={handleDeleteActivity} />
         <ActivityForm destinations={destinations} onSubmit={handleAddActivity} />
+      </section>
+
+      <section className="section-block">
+        <h2>Deljenje plana</h2>
+        <ShareLinkPanel authToken={token} planId={id} />
       </section>
 
       <section className="section-block">

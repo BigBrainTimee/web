@@ -83,6 +83,111 @@ public class BudgetServiceImpl : IBudgetService
             return null;
         }
 
+        return await BuildSummaryAsync(planId, cancellationToken);
+    }
+
+    public async Task<BudgetSummaryDto?> GetSharedSummaryAsync(string token, CancellationToken cancellationToken = default)
+    {
+        var context = await GetValidShareContextAsync(token, cancellationToken);
+        if (context is null)
+        {
+            return null;
+        }
+
+        return await BuildSummaryAsync(context.Value, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<ExpenseResponseDto>?> GetSharedExpensesAsync(string token, CancellationToken cancellationToken = default)
+    {
+        var context = await GetValidShareContextAsync(token, cancellationToken);
+        if (context is null)
+        {
+            return null;
+        }
+
+        var expenses = await _dbContext.Expenses
+            .AsNoTracking()
+            .Where(e => e.TravelPlanId == context.Value)
+            .OrderByDescending(e => e.ExpenseDate)
+            .ThenBy(e => e.Id)
+            .ToListAsync(cancellationToken);
+
+        return expenses.Select(ExpenseMapper.ToResponseDto).ToList();
+    }
+
+    public async Task<ExpenseResponseDto?> AddSharedExpenseAsync(string token, CreateExpenseDto dto, CancellationToken cancellationToken = default)
+    {
+        var context = await GetValidShareContextAsync(token, cancellationToken, requireEdit: true);
+        if (context is null)
+        {
+            return null;
+        }
+
+        var expense = ExpenseMapper.ToEntity(dto, context.Value);
+        _dbContext.Expenses.Add(expense);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return ExpenseMapper.ToResponseDto(expense);
+    }
+
+    public async Task<ExpenseResponseDto?> UpdateSharedExpenseAsync(
+        string token,
+        int expenseId,
+        UpdateExpenseDto dto,
+        CancellationToken cancellationToken = default)
+    {
+        var context = await GetValidShareContextAsync(token, cancellationToken, requireEdit: true);
+        if (context is null)
+        {
+            return null;
+        }
+
+        var expense = await _dbContext.Expenses
+            .FirstOrDefaultAsync(e => e.Id == expenseId && e.TravelPlanId == context.Value, cancellationToken);
+
+        if (expense is null)
+        {
+            return null;
+        }
+
+        ExpenseMapper.ApplyUpdate(expense, dto);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return ExpenseMapper.ToResponseDto(expense);
+    }
+
+    public async Task<bool> DeleteSharedExpenseAsync(string token, int expenseId, CancellationToken cancellationToken = default)
+    {
+        var context = await GetValidShareContextAsync(token, cancellationToken, requireEdit: true);
+        if (context is null)
+        {
+            return false;
+        }
+
+        var expense = await _dbContext.Expenses
+            .FirstOrDefaultAsync(e => e.Id == expenseId && e.TravelPlanId == context.Value, cancellationToken);
+
+        if (expense is null)
+        {
+            return false;
+        }
+
+        _dbContext.Expenses.Remove(expense);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    private async Task<BudgetSummaryDto?> BuildSummaryAsync(int planId, CancellationToken cancellationToken)
+    {
+        var plan = await _dbContext.TravelPlans
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == planId, cancellationToken);
+
+        if (plan is null)
+        {
+            return null;
+        }
+
         var byCategory = await _dbContext.Expenses
             .AsNoTracking()
             .Where(e => e.TravelPlanId == planId)
@@ -104,6 +209,48 @@ public class BudgetServiceImpl : IBudgetService
             TotalSpent = totalSpent,
             Remaining = plan.PlannedBudget - totalSpent,
             ByCategory = byCategory
+        };
+    }
+
+    private async Task<int?> GetValidShareContextAsync(
+        string token,
+        CancellationToken cancellationToken,
+        bool requireEdit = false)
+    {
+        var link = await _dbContext.ShareLinks
+            .AsNoTracking()
+            .FirstOrDefaultAsync(s => s.Token == token, cancellationToken);
+
+        if (link is null)
+        {
+            return null;
+        }
+
+        if (link.ExpiresAt.HasValue && ToUtc(link.ExpiresAt) <= DateTime.UtcNow)
+        {
+            return null;
+        }
+
+        if (requireEdit && !link.AccessType.Equals("Edit", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return link.TravelPlanId;
+    }
+
+    private static DateTime ToUtc(DateTime? value)
+    {
+        if (!value.HasValue)
+        {
+            return DateTime.MinValue;
+        }
+
+        return value.Value.Kind switch
+        {
+            DateTimeKind.Utc => value.Value,
+            DateTimeKind.Local => value.Value.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(value.Value, DateTimeKind.Utc)
         };
     }
 

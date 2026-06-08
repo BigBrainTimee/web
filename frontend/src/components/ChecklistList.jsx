@@ -1,4 +1,4 @@
-export default function ChecklistList({ items, onToggle, onDelete }) {
+export default function ChecklistList({ items, onToggle, onDelete, readOnly = false }) {
   if (items.length === 0) {
     return <p className="muted">Checklist je prazna.</p>;
   }
@@ -11,13 +11,16 @@ export default function ChecklistList({ items, onToggle, onDelete }) {
             <input
               type="checkbox"
               checked={item.isCompleted}
-              onChange={() => onToggle(item.id)}
+              disabled={readOnly || !onToggle}
+              onChange={() => onToggle?.(item.id)}
             />
             <span>{item.title}</span>
           </label>
+          {!readOnly && onDelete && (
           <button type="button" className="btn btn-danger btn-sm" onClick={() => onDelete(item.id)}>
             Obriši
           </button>
+          )}
         </li>
       ))}
     </ul>

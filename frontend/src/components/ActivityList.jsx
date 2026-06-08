@@ -5,7 +5,7 @@ const STATUS_LABELS = {
   Cancelled: 'Otkazano',
 };
 
-export default function ActivityList({ activities, onDelete }) {
+export default function ActivityList({ activities, onDelete, readOnly = false }) {
   if (activities.length === 0) {
     return <p className="muted">Još nema aktivnosti za ovaj plan.</p>;
   }
@@ -37,9 +37,11 @@ export default function ActivityList({ activities, onDelete }) {
                   {activity.estimatedCost != null && <p>Proc. trošak: {activity.estimatedCost} €</p>}
                   {activity.description && <p>{activity.description}</p>}
                 </div>
+                {!readOnly && onDelete && (
                 <button type="button" className="btn btn-danger" onClick={() => onDelete(activity.id)}>
                   Obriši
                 </button>
+                )}
               </article>
             ))}
           </div>

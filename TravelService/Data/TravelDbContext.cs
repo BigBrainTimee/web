@@ -14,6 +14,8 @@ public class TravelDbContext : DbContext
     public DbSet<Destination> Destinations => Set<Destination>();
     public DbSet<Activity> Activities => Set<Activity>();
     public DbSet<ChecklistItem> ChecklistItems => Set<ChecklistItem>();
+    public DbSet<ShareLink> ShareLinks => Set<ShareLink>();
+    public DbSet<Expense> Expenses => Set<Expense>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -57,6 +59,35 @@ public class TravelDbContext : DbContext
                 .HasForeignKey(a => a.DestinationId)
                 .OnDelete(DeleteBehavior.NoAction);
             entity.HasIndex(a => new { a.TravelPlanId, a.ActivityDate });
+        });
+
+        modelBuilder.Entity<ShareLink>(entity =>
+        {
+            entity.ToTable("ShareLinks");
+            entity.HasKey(s => s.Id);
+            entity.Property(s => s.Token).HasMaxLength(100).IsRequired();
+            entity.Property(s => s.AccessType).HasMaxLength(10).IsRequired();
+            entity.Property(s => s.CreatedAt).HasColumnType("datetime2(0)");
+            entity.Property(s => s.ExpiresAt).HasColumnType("datetime2(0)");
+            entity.HasIndex(s => s.Token).IsUnique();
+            entity.HasOne(s => s.TravelPlan)
+                .WithMany(p => p.ShareLinks)
+                .HasForeignKey(s => s.TravelPlanId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Expense>(entity =>
+        {
+            entity.ToTable("Expenses");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.Category).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Amount).HasColumnType("decimal(18,2)");
+            entity.HasOne(e => e.TravelPlan)
+                .WithMany()
+                .HasForeignKey(e => e.TravelPlanId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(e => e.TravelPlanId);
         });
 
         modelBuilder.Entity<ChecklistItem>(entity =>

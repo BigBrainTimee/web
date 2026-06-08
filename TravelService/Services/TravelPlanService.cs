@@ -282,6 +282,410 @@ public class TravelPlanService : ITravelPlanService
         return true;
     }
 
+    public async Task<IReadOnlyList<ShareLinkResponseDto>> GetShareLinksAsync(int userId, int planId, CancellationToken cancellationToken = default)
+    {
+        if (!await PlanExistsForUserAsync(userId, planId, cancellationToken))
+        {
+            return Array.Empty<ShareLinkResponseDto>();
+        }
+
+        var links = await _dbContext.ShareLinks
+            .AsNoTracking()
+            .Where(s => s.TravelPlanId == planId)
+            .OrderByDescending(s => s.CreatedAt)
+            .ToListAsync(cancellationToken);
+
+        return links.Select(ShareLinkMapper.ToResponseDto).ToList();
+    }
+
+    public async Task<ShareLinkResponseDto?> CreateShareLinkAsync(int userId, int planId, CreateShareLinkDto dto, CancellationToken cancellationToken = default)
+    {
+        if (!await PlanExistsForUserAsync(userId, planId, cancellationToken))
+        {
+            return null;
+        }
+
+        if (dto.ExpiresAt.HasValue && ShareLinkMapper.ToUtc(dto.ExpiresAt) <= DateTime.UtcNow)
+        {
+            throw new ArgumentException("Expiry date must be in the future.");
+        }
+
+        var link = ShareLinkMapper.ToEntity(dto, planId);
+        _dbContext.ShareLinks.Add(link);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return ShareLinkMapper.ToResponseDto(link);
+    }
+
+    public async Task<bool> DeleteShareLinkAsync(int userId, int planId, int linkId, CancellationToken cancellationToken = default)
+    {
+        var link = await _dbContext.ShareLinks
+            .Include(s => s.TravelPlan)
+            .FirstOrDefaultAsync(
+                s => s.Id == linkId
+                    && s.TravelPlanId == planId
+                    && s.TravelPlan != null
+                    && s.TravelPlan.UserId == userId,
+                cancellationToken);
+
+        if (link is null)
+        {
+            return false;
+        }
+
+        _dbContext.ShareLinks.Remove(link);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    public async Task<SharedPlanResponseDto?> GetSharedPlanAsync(string token, CancellationToken cancellationToken = default)
+    {
+        var context = await GetValidShareContextAsync(token, cancellationToken);
+        if (context is null)
+        {
+            return null;
+        }
+
+        var (link, plan) = context.Value;
+        var planId = plan.Id;
+
+        var destinations = await _dbContext.Destinations
+            .AsNoTracking()
+            .Where(d => d.TravelPlanId == planId)
+            .OrderBy(d => d.ArrivalDate)
+            .ToListAsync(cancellationToken);
+
+        var activities = await _dbContext.Activities
+            .AsNoTracking()
+            .Where(a => a.TravelPlanId == planId)
+            .OrderBy(a => a.ActivityDate)
+            .ThenBy(a => a.ActivityTime)
+            .ToListAsync(cancellationToken);
+
+        var checklistItems = await _dbContext.ChecklistItems
+            .AsNoTracking()
+            .Where(c => c.TravelPlanId == planId)
+            .OrderBy(c => c.SortOrder)
+            .ThenBy(c => c.Id)
+            .ToListAsync(cancellationToken);
+
+        var expenses = await _dbContext.Expenses
+            .AsNoTracking()
+            .Where(e => e.TravelPlanId == planId)
+            .OrderByDescending(e => e.ExpenseDate)
+            .ThenBy(e => e.Id)
+            .ToListAsync(cancellationToken);
+
+        var byCategory = expenses
+            .GroupBy(e => e.Category)
+            .Select(g => new CategorySummaryDto
+            {
+                Category = g.Key,
+                Amount = g.Sum(e => e.Amount)
+            })
+            .OrderBy(c => c.Category)
+            .ToList();
+
+        var totalSpent = byCategory.Sum(c => c.Amount);
+
+        return new SharedPlanResponseDto
+        {
+            AccessType = link.AccessType,
+            CanEdit = link.AccessType.Equals("Edit", StringComparison.OrdinalIgnoreCase),
+            Plan = TravelPlanMapper.ToResponseDto(plan),
+            Destinations = destinations.Select(DestinationMapper.ToResponseDto).ToList(),
+            Activities = activities.Select(ActivityMapper.ToResponseDto).ToList(),
+            ChecklistItems = checklistItems.Select(ChecklistItemMapper.ToResponseDto).ToList(),
+            Expenses = expenses.Select(ExpenseMapper.ToResponseDto).ToList(),
+            BudgetSummary = new BudgetSummaryDto
+            {
+                TravelPlanId = planId,
+                PlannedBudget = plan.PlannedBudget,
+                TotalSpent = totalSpent,
+                Remaining = plan.PlannedBudget - totalSpent,
+                ByCategory = byCategory
+            }
+        };
+    }
+
+    public async Task<ChecklistItemResponseDto?> ToggleSharedChecklistItemAsync(string token, int itemId, CancellationToken cancellationToken = default)
+    {
+        var context = await GetValidShareContextAsync(token, cancellationToken, requireEdit: true);
+        if (context is null)
+        {
+            return null;
+        }
+
+        var planId = context.Value.plan.Id;
+        var item = await _dbContext.ChecklistItems
+            .FirstOrDefaultAsync(c => c.Id == itemId && c.TravelPlanId == planId, cancellationToken);
+
+        if (item is null)
+        {
+            return null;
+        }
+
+        item.IsCompleted = !item.IsCompleted;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return ChecklistItemMapper.ToResponseDto(item);
+    }
+
+    public async Task<ChecklistItemResponseDto?> AddSharedChecklistItemAsync(string token, CreateChecklistItemDto dto, CancellationToken cancellationToken = default)
+    {
+        var context = await GetValidShareContextAsync(token, cancellationToken, requireEdit: true);
+        if (context is null)
+        {
+            return null;
+        }
+
+        var planId = context.Value.plan.Id;
+        var item = ChecklistItemMapper.ToEntity(dto, planId);
+        _dbContext.ChecklistItems.Add(item);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return ChecklistItemMapper.ToResponseDto(item);
+    }
+
+    public async Task<bool> DeleteSharedChecklistItemAsync(string token, int itemId, CancellationToken cancellationToken = default)
+    {
+        var context = await GetValidShareContextAsync(token, cancellationToken, requireEdit: true);
+        if (context is null)
+        {
+            return false;
+        }
+
+        var planId = context.Value.plan.Id;
+        var item = await _dbContext.ChecklistItems
+            .FirstOrDefaultAsync(c => c.Id == itemId && c.TravelPlanId == planId, cancellationToken);
+
+        if (item is null)
+        {
+            return false;
+        }
+
+        _dbContext.ChecklistItems.Remove(item);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    public async Task<DestinationResponseDto?> AddSharedDestinationAsync(string token, CreateDestinationDto dto, CancellationToken cancellationToken = default)
+    {
+        ValidateDestinationDates(dto.ArrivalDate, dto.DepartureDate);
+
+        var context = await GetValidShareContextAsync(token, cancellationToken, requireEdit: true);
+        if (context is null)
+        {
+            return null;
+        }
+
+        var planId = context.Value.plan.Id;
+        var destination = DestinationMapper.ToEntity(dto, planId);
+        _dbContext.Destinations.Add(destination);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return DestinationMapper.ToResponseDto(destination);
+    }
+
+    public async Task<DestinationResponseDto?> UpdateSharedDestinationAsync(
+        string token,
+        int destinationId,
+        UpdateDestinationDto dto,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateDestinationDates(dto.ArrivalDate, dto.DepartureDate);
+
+        var context = await GetValidShareContextAsync(token, cancellationToken, requireEdit: true);
+        if (context is null)
+        {
+            return null;
+        }
+
+        var planId = context.Value.plan.Id;
+        var destination = await _dbContext.Destinations
+            .FirstOrDefaultAsync(d => d.Id == destinationId && d.TravelPlanId == planId, cancellationToken);
+
+        if (destination is null)
+        {
+            return null;
+        }
+
+        DestinationMapper.ApplyUpdate(destination, dto);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return DestinationMapper.ToResponseDto(destination);
+    }
+
+    public async Task<bool> DeleteSharedDestinationAsync(string token, int destinationId, CancellationToken cancellationToken = default)
+    {
+        var context = await GetValidShareContextAsync(token, cancellationToken, requireEdit: true);
+        if (context is null)
+        {
+            return false;
+        }
+
+        var planId = context.Value.plan.Id;
+        var destination = await _dbContext.Destinations
+            .FirstOrDefaultAsync(d => d.Id == destinationId && d.TravelPlanId == planId, cancellationToken);
+
+        if (destination is null)
+        {
+            return false;
+        }
+
+        _dbContext.Destinations.Remove(destination);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    public async Task<ActivityResponseDto?> AddSharedActivityAsync(string token, CreateActivityDto dto, CancellationToken cancellationToken = default)
+    {
+        ActivityMapper.NormalizeStatus(dto.Status);
+
+        var context = await GetValidShareContextAsync(token, cancellationToken, requireEdit: true);
+        if (context is null)
+        {
+            return null;
+        }
+
+        var planId = context.Value.plan.Id;
+        await ValidateDestinationForPlanAsync(planId, dto.DestinationId, cancellationToken);
+
+        if (dto.EstimatedCost is < 0)
+        {
+            throw new ArgumentException("Estimated cost cannot be negative.");
+        }
+
+        var activity = ActivityMapper.ToEntity(dto, planId);
+        _dbContext.Activities.Add(activity);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return ActivityMapper.ToResponseDto(activity);
+    }
+
+    public async Task<ActivityResponseDto?> UpdateSharedActivityAsync(
+        string token,
+        int activityId,
+        UpdateActivityDto dto,
+        CancellationToken cancellationToken = default)
+    {
+        ActivityMapper.NormalizeStatus(dto.Status);
+
+        var context = await GetValidShareContextAsync(token, cancellationToken, requireEdit: true);
+        if (context is null)
+        {
+            return null;
+        }
+
+        var planId = context.Value.plan.Id;
+        var activity = await _dbContext.Activities
+            .FirstOrDefaultAsync(a => a.Id == activityId && a.TravelPlanId == planId, cancellationToken);
+
+        if (activity is null)
+        {
+            return null;
+        }
+
+        await ValidateDestinationForPlanAsync(planId, dto.DestinationId, cancellationToken);
+
+        if (dto.EstimatedCost is < 0)
+        {
+            throw new ArgumentException("Estimated cost cannot be negative.");
+        }
+
+        ActivityMapper.ApplyUpdate(activity, dto);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return ActivityMapper.ToResponseDto(activity);
+    }
+
+    public async Task<bool> DeleteSharedActivityAsync(string token, int activityId, CancellationToken cancellationToken = default)
+    {
+        var context = await GetValidShareContextAsync(token, cancellationToken, requireEdit: true);
+        if (context is null)
+        {
+            return false;
+        }
+
+        var planId = context.Value.plan.Id;
+        var activity = await _dbContext.Activities
+            .FirstOrDefaultAsync(a => a.Id == activityId && a.TravelPlanId == planId, cancellationToken);
+
+        if (activity is null)
+        {
+            return false;
+        }
+
+        _dbContext.Activities.Remove(activity);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    public async Task<ExpenseResponseDto?> AddSharedExpenseAsync(string token, CreateExpenseDto dto, CancellationToken cancellationToken = default)
+    {
+        var context = await GetValidShareContextAsync(token, cancellationToken, requireEdit: true);
+        if (context is null)
+        {
+            return null;
+        }
+
+        var planId = context.Value.plan.Id;
+        var expense = ExpenseMapper.ToEntity(dto, planId);
+        _dbContext.Expenses.Add(expense);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return ExpenseMapper.ToResponseDto(expense);
+    }
+
+    public async Task<bool> DeleteSharedExpenseAsync(string token, int expenseId, CancellationToken cancellationToken = default)
+    {
+        var context = await GetValidShareContextAsync(token, cancellationToken, requireEdit: true);
+        if (context is null)
+        {
+            return false;
+        }
+
+        var planId = context.Value.plan.Id;
+        var expense = await _dbContext.Expenses
+            .FirstOrDefaultAsync(e => e.Id == expenseId && e.TravelPlanId == planId, cancellationToken);
+
+        if (expense is null)
+        {
+            return false;
+        }
+
+        _dbContext.Expenses.Remove(expense);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    private async Task<(Models.ShareLink link, Models.TravelPlan plan)?> GetValidShareContextAsync(
+        string token,
+        CancellationToken cancellationToken,
+        bool requireEdit = false)
+    {
+        var link = await _dbContext.ShareLinks
+            .Include(s => s.TravelPlan)
+            .FirstOrDefaultAsync(s => s.Token == token, cancellationToken);
+
+        if (link?.TravelPlan is null)
+        {
+            return null;
+        }
+
+        if (link.ExpiresAt.HasValue && ShareLinkMapper.ToUtc(link.ExpiresAt) <= DateTime.UtcNow)
+        {
+            return null;
+        }
+
+        if (requireEdit && !link.AccessType.Equals("Edit", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return (link, link.TravelPlan);
+    }
+
     private async Task<Models.TravelPlan?> GetOwnedPlanAsync(
         int userId,
         int planId,

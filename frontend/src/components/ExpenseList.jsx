@@ -1,4 +1,4 @@
-export default function ExpenseList({ expenses, onDelete }) {
+export default function ExpenseList({ expenses, onDelete, readOnly = false }) {
   if (expenses.length === 0) {
     return <p className="muted">Nema unetih troškova.</p>;
   }
@@ -13,9 +13,11 @@ export default function ExpenseList({ expenses, onDelete }) {
             <p className="muted">{expense.expenseDate} · {expense.amount.toFixed(2)} €</p>
             {expense.description && <p>{expense.description}</p>}
           </div>
+          {!readOnly && onDelete && (
           <button type="button" className="btn btn-danger btn-sm" onClick={() => onDelete(expense.id)}>
             Obriši
           </button>
+          )}
         </li>
       ))}
     </ul>

@@ -324,6 +324,50 @@ public class TravelPlansController : ControllerBase
         return deleted ? NoContent() : NotFound(new { message = "Checklist item not found." });
     }
 
+    [HttpGet("{id:int}/share-links")]
+    public async Task<ActionResult<IReadOnlyList<ShareLinkResponseDto>>> GetShareLinks(int id, CancellationToken cancellationToken)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+
+        if (await _travelPlanService.GetByIdAsync(userId.Value, id, cancellationToken) is null)
+            return NotFound(new { message = "Travel plan not found." });
+
+        var links = await _travelPlanService.GetShareLinksAsync(userId.Value, id, cancellationToken);
+        return Ok(links);
+    }
+
+    [HttpPost("{id:int}/share-links")]
+    public async Task<ActionResult<ShareLinkResponseDto>> CreateShareLink(int id, [FromBody] CreateShareLinkDto request, CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid) return ValidationProblem(ModelState);
+
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+
+        try
+        {
+            var link = await _travelPlanService.CreateShareLinkAsync(userId.Value, id, request, cancellationToken);
+            return link is null
+                ? NotFound(new { message = "Travel plan not found." })
+                : CreatedAtAction(nameof(GetShareLinks), new { id }, link);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpDelete("{id:int}/share-links/{linkId:int}")]
+    public async Task<IActionResult> DeleteShareLink(int id, int linkId, CancellationToken cancellationToken)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+
+        var deleted = await _travelPlanService.DeleteShareLinkAsync(userId.Value, id, linkId, cancellationToken);
+        return deleted ? NoContent() : NotFound(new { message = "Share link not found." });
+    }
+
     private int? GetUserId()
     {
         var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);

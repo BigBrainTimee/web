@@ -20,6 +20,12 @@ public static class PublicEndpoints
             return false;
         }
 
-        return Allowed.Contains((method.ToUpperInvariant(), normalizedPath));
+        return Allowed.Contains((method.ToUpperInvariant(), normalizedPath))
+            || IsSharedRoute(normalizedPath);
     }
+
+    private static bool IsSharedRoute(string path) =>
+        path.Contains("/shared/", StringComparison.OrdinalIgnoreCase)
+        && (path.StartsWith("/api/travel/", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith("/api/budget/", StringComparison.OrdinalIgnoreCase));
 }
