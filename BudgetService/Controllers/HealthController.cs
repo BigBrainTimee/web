@@ -1,8 +1,10 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BudgetService.Controllers;
 
 [ApiController]
+[AllowAnonymous]
 [Route("api/budget")]
 public class HealthController : ControllerBase
 {

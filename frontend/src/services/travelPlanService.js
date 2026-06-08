@@ -1,5 +1,7 @@
 import { createDestination as mapDestination } from '../models/Destination';
 import { createTravelPlan as mapTravelPlan } from '../models/TravelPlan';
+import { createActivity as mapActivity } from '../models/Activity';
+import { createChecklistItem as mapChecklistItem } from '../models/ChecklistItem';
 import { apiRequest } from './apiClient';
 
 const BASE = '/api/travel/travel-plans';
@@ -64,6 +66,56 @@ export async function updateDestination(token, planId, destinationId, payload) {
 
 export async function deleteDestination(token, planId, destinationId) {
   return apiRequest(`${BASE}/${planId}/destinations/${destinationId}`, {
+    method: 'DELETE',
+    token,
+  });
+}
+
+export async function getActivities(token, planId) {
+  const data = await apiRequest(`${BASE}/${planId}/activities`, { token });
+  return data.map(mapActivity);
+}
+
+export async function createActivity(token, planId, payload) {
+  const data = await apiRequest(`${BASE}/${planId}/activities`, {
+    method: 'POST',
+    token,
+    body: payload,
+  });
+  return mapActivity(data);
+}
+
+export async function deleteActivity(token, planId, activityId) {
+  return apiRequest(`${BASE}/${planId}/activities/${activityId}`, {
+    method: 'DELETE',
+    token,
+  });
+}
+
+export async function getChecklistItems(token, planId) {
+  const data = await apiRequest(`${BASE}/${planId}/checklist-items`, { token });
+  return data.map(mapChecklistItem);
+}
+
+export async function createChecklistItem(token, planId, payload) {
+  const data = await apiRequest(`${BASE}/${planId}/checklist-items`, {
+    method: 'POST',
+    token,
+    body: payload,
+  });
+  return mapChecklistItem(data);
+}
+
+export async function toggleChecklistItem(token, planId, itemId) {
+  const data = await apiRequest(`${BASE}/${planId}/checklist-items/${itemId}/toggle`, {
+    method: 'PATCH',
+    token,
+  });
+  return mapChecklistItem(data);
+}
+
+export async function deleteChecklistItem(token, planId, itemId) {
+  return apiRequest(`${BASE}/${planId}/checklist-items/${itemId}`, {
     method: 'DELETE',
     token,
   });
