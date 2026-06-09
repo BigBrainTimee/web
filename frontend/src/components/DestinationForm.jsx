@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 const emptyForm = {
   name: '',
@@ -8,9 +8,30 @@ const emptyForm = {
   description: '',
 };
 
-export default function DestinationForm({ onSubmit, onCancel }) {
-  const [form, setForm] = useState(emptyForm);
+export function destinationToFormValues(destination) {
+  return {
+    name: destination.name,
+    location: destination.location,
+    arrivalDate: destination.arrivalDate,
+    departureDate: destination.departureDate,
+    description: destination.description ?? '',
+  };
+}
+
+export default function DestinationForm({
+  onSubmit,
+  onCancel,
+  initialValues = null,
+  submitLabel,
+}) {
+  const isEditing = Boolean(initialValues);
+  const [form, setForm] = useState(() => initialValues ?? emptyForm);
   const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    setForm(initialValues ?? emptyForm);
+    setErrors({});
+  }, [initialValues]);
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -45,12 +66,16 @@ export default function DestinationForm({ onSubmit, onCancel }) {
       description: form.description.trim() || null,
     });
 
-    setForm(emptyForm);
+    if (!isEditing) {
+      setForm(emptyForm);
+    }
   }
+
+  const resolvedSubmitLabel = submitLabel ?? (isEditing ? 'Sačuvaj izmene' : 'Dodaj');
 
   return (
     <form className="card form-card nested-form" onSubmit={handleSubmit}>
-      <h3>Dodaj destinaciju</h3>
+      <h3>{isEditing ? 'Izmeni destinaciju' : 'Dodaj destinaciju'}</h3>
 
       <label>
         Naziv
@@ -83,7 +108,7 @@ export default function DestinationForm({ onSubmit, onCancel }) {
       </label>
 
       <div className="form-actions">
-        <button type="submit" className="btn btn-primary">Dodaj</button>
+        <button type="submit" className="btn btn-primary">{resolvedSubmitLabel}</button>
         {onCancel && (
           <button type="button" className="btn btn-secondary" onClick={onCancel}>
             Otkaži

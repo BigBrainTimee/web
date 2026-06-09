@@ -227,11 +227,17 @@ textarea {
   gap: 1rem;
 }
 
-.plan-card,
-.destination-card {
+.plan-card {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  gap: 1rem;
+}
+
+.destination-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
   gap: 1rem;
 }
 
@@ -735,10 +741,34 @@ select {
 }
 
 @media (max-width: 700px) {
-  .app-header,
+  .app-main {
+    padding: 1rem 0.75rem 2rem;
+  }
+
+  .app-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem;
+  }
+
+  .nav-links {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
   .page-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .header-actions {
+    width: 100%;
+  }
+
+  .header-actions .btn {
+    flex: 1 1 calc(50% - 0.375rem);
+    min-width: 8rem;
   }
 
   .form-row {
@@ -747,6 +777,38 @@ select {
 
   .budget-stats {
     grid-template-columns: 1fr;
+  }
+
+  .section-header-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .view-toggle {
+    width: 100%;
+  }
+
+  .view-toggle button {
+    flex: 1;
+  }
+
+  .activity-card,
+  .destination-card,
+  .item-row {
+    flex-direction: column;
+  }
+
+  .card-actions {
+    width: 100%;
+  }
+
+  .card-actions .btn {
+    flex: 1;
+  }
+
+  .month-calendar-toolbar {
+    flex-wrap: wrap;
+    gap: 0.5rem;
   }
 
   .month-calendar-cell {
@@ -758,6 +820,19 @@ select {
     font-size: 0.65rem;
     min-width: 1rem;
     height: 1rem;
+  }
+
+  .month-calendar-weekday {
+    font-size: 0.75rem;
+  }
+
+  .share-link-body {
+    flex-direction: column;
+  }
+
+  .shared-banner {
+    font-size: 0.9rem;
+    line-height: 1.4;
   }
 }
 

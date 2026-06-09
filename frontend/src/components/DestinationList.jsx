@@ -1,4 +1,4 @@
-export default function DestinationList({ destinations, onDelete, readOnly = false }) {
+export default function DestinationList({ destinations, onDelete, onEdit, readOnly = false }) {
   if (destinations.length === 0) {
     return <p className="muted">Još nema destinacija za ovaj plan.</p>;
   }
@@ -15,14 +15,27 @@ export default function DestinationList({ destinations, onDelete, readOnly = fal
             </p>
             {destination.description && <p>{destination.description}</p>}
           </div>
-          {!readOnly && onDelete && (
-          <button
-            type="button"
-            className="btn btn-danger"
-            onClick={() => onDelete(destination.id)}
-          >
-            Obriši
-          </button>
+          {!readOnly && (onEdit || onDelete) && (
+            <div className="card-actions">
+              {onEdit && (
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => onEdit(destination)}
+                >
+                  Izmeni
+                </button>
+              )}
+              {onDelete && (
+                <button
+                  type="button"
+                  className="btn btn-danger btn-sm"
+                  onClick={() => onDelete(destination.id)}
+                >
+                  Obriši
+                </button>
+              )}
+            </div>
           )}
         </article>
       ))}

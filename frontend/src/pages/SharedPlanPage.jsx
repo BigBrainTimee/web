@@ -11,7 +11,7 @@ import ChecklistForm from '../components/ChecklistForm';
 
 import ChecklistList from '../components/ChecklistList';
 
-import DestinationForm from '../components/DestinationForm';
+import DestinationForm, { destinationToFormValues } from '../components/DestinationForm';
 
 import DestinationList from '../components/DestinationList';
 
@@ -40,6 +40,8 @@ export default function SharedPlanPage() {
   const [error, setError] = useState('');
 
   const [success, setSuccess] = useState('');
+
+  const [editingDestination, setEditingDestination] = useState(null);
 
 
 
@@ -229,6 +231,8 @@ export default function SharedPlanPage() {
 
           destinations={destinations}
 
+          onEdit={canEdit ? setEditingDestination : undefined}
+
           onDelete={canEdit ? (id) => {
 
             if (!window.confirm('Obrisati destinaciju?')) return;
@@ -243,13 +247,27 @@ export default function SharedPlanPage() {
 
         {canEdit && (
 
-          <DestinationForm onSubmit={(payload) => runAction(
+          <DestinationForm
 
-            () => shareService.addSharedDestination(token, payload),
+            key={editingDestination?.id ?? 'new-destination'}
 
-            'Destinacija je dodata.',
+            initialValues={editingDestination ? destinationToFormValues(editingDestination) : null}
 
-          )} />
+            onSubmit={(payload) => runAction(
+
+              () => editingDestination
+
+                ? shareService.updateSharedDestination(token, editingDestination.id, payload)
+
+                : shareService.addSharedDestination(token, payload),
+
+              editingDestination ? 'Destinacija je ažurirana.' : 'Destinacija je dodata.',
+
+            ).then(() => setEditingDestination(null))}
+
+            onCancel={editingDestination ? () => setEditingDestination(null) : undefined}
+
+          />
 
         )}
 
@@ -270,9 +288,11 @@ export default function SharedPlanPage() {
           () => shareService.addSharedActivity(token, payload),
           'Aktivnost je dodata.',
         ) : undefined}
+        onUpdate={canEdit ? (activityId, payload) => runAction(
+          () => shareService.updateSharedActivity(token, activityId, payload),
+          'Aktivnost je ažurirana.',
+        ) : undefined}
       />
-
-
 
       <section className="section-block">
 

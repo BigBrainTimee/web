@@ -27,7 +27,7 @@ export async function loginUser(payload) {
   };
 }
 
-export async function getCurrentUser(token) {
-  const data = await apiRequest('/api/auth/me', { token });
+export async function getCurrentUser(token, signal) {
+  const data = await apiRequest('/api/auth/me', { token, signal });
   return createUser(data);
 }

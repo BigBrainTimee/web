@@ -4,24 +4,58 @@ import * as authService from '../services/authService';
 const AuthContext = createContext(null);
 
 const TOKEN_KEY = 'travel_planner_token';
+const USER_KEY = 'travel_planner_user';
+
+function readCachedUser() {
+  const raw = localStorage.getItem(USER_KEY);
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    localStorage.removeItem(USER_KEY);
+    return null;
+  }
+}
+
+function persistSession(token, user) {
+  localStorage.setItem(TOKEN_KEY, token);
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+}
+
+function clearSession() {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
+}
 
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY));
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(() => readCachedUser());
+  const [loading, setLoading] = useState(() => Boolean(localStorage.getItem(TOKEN_KEY)));
 
   useEffect(() => {
-    async function loadUser() {
-      if (!token) {
-        setLoading(false);
-        return;
-      }
+    if (!token) {
+      setUser(null);
+      setLoading(false);
+      return undefined;
+    }
 
+    const cachedUser = readCachedUser();
+    if (cachedUser) {
+      setUser(cachedUser);
+      setLoading(false);
+    }
+
+    const controller = new AbortController();
+
+    async function validateSession() {
       try {
-        const currentUser = await authService.getCurrentUser(token);
+        const currentUser = await authService.getCurrentUser(token, controller.signal);
         setUser(currentUser);
-      } catch {
-        localStorage.removeItem(TOKEN_KEY);
+        localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+      } catch (err) {
+        if (err?.name === 'AbortError') return;
+        clearSession();
         setToken(null);
         setUser(null);
       } finally {
@@ -29,7 +63,9 @@ export function AuthProvider({ children }) {
       }
     }
 
-    loadUser();
+    validateSession();
+
+    return () => controller.abort();
   }, [token]);
 
   const value = useMemo(() => ({
@@ -39,20 +75,20 @@ export function AuthProvider({ children }) {
     isAuthenticated: Boolean(token && user),
     async login(credentials) {
       const result = await authService.loginUser(credentials);
-      localStorage.setItem(TOKEN_KEY, result.token);
+      persistSession(result.token, result.user);
       setToken(result.token);
       setUser(result.user);
       return result;
     },
     async register(payload) {
       const result = await authService.registerUser(payload);
-      localStorage.setItem(TOKEN_KEY, result.token);
+      persistSession(result.token, result.user);
       setToken(result.token);
       setUser(result.user);
       return result;
     },
     logout() {
-      localStorage.removeItem(TOKEN_KEY);
+      clearSession();
       setToken(null);
       setUser(null);
     },

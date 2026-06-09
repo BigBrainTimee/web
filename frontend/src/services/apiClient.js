@@ -25,7 +25,7 @@ async function parseError(response) {
 }
 
 export async function apiRequest(path, options = {}) {
-  const { token, body, method = 'GET', headers = {} } = options;
+  const { token, body, method = 'GET', headers = {}, signal } = options;
 
   const requestHeaders = {
     ...headers,
@@ -43,6 +43,7 @@ export async function apiRequest(path, options = {}) {
     method,
     headers: requestHeaders,
     body: body !== undefined ? JSON.stringify(body) : undefined,
+    signal,
   });
 
   if (!response.ok) {

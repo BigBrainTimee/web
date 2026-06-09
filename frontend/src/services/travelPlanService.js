@@ -95,6 +95,15 @@ export async function createActivity(token, planId, payload) {
   return mapActivity(data);
 }
 
+export async function updateActivity(token, planId, activityId, payload) {
+  const data = await apiRequest(`${BASE}/${planId}/activities/${activityId}`, {
+    method: 'PUT',
+    token,
+    body: payload,
+  });
+  return mapActivity(data);
+}
+
 export async function deleteActivity(token, planId, activityId) {
   return apiRequest(`${BASE}/${planId}/activities/${activityId}`, {
     method: 'DELETE',

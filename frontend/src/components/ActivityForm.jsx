@@ -13,17 +13,44 @@ const emptyForm = {
   destinationId: '',
 };
 
-export default function ActivityForm({ destinations, onSubmit, fixedDate = null }) {
-  const [form, setForm] = useState(() => (
-    fixedDate ? { ...emptyForm, activityDate: fixedDate } : emptyForm
-  ));
+export function activityToFormValues(activity) {
+  return {
+    name: activity.name,
+    activityDate: activity.activityDate,
+    activityTime: activity.activityTime ?? '',
+    location: activity.location ?? '',
+    description: activity.description ?? '',
+    estimatedCost: activity.estimatedCost ?? '',
+    status: activity.status,
+    destinationId: activity.destinationId ?? '',
+  };
+}
+
+export default function ActivityForm({
+  destinations,
+  onSubmit,
+  onCancel,
+  fixedDate = null,
+  initialValues = null,
+  submitLabel,
+}) {
+  const isEditing = Boolean(initialValues);
+  const [form, setForm] = useState(() => {
+    if (initialValues) return initialValues;
+    return fixedDate ? { ...emptyForm, activityDate: fixedDate } : emptyForm;
+  });
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    if (fixedDate) {
-      setForm((prev) => ({ ...prev, activityDate: fixedDate }));
+    if (initialValues) {
+      setForm(initialValues);
+      setErrors({});
+      return;
     }
-  }, [fixedDate]);
+
+    setForm(fixedDate ? { ...emptyForm, activityDate: fixedDate } : emptyForm);
+    setErrors({});
+  }, [initialValues, fixedDate]);
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -57,14 +84,19 @@ export default function ActivityForm({ destinations, onSubmit, fixedDate = null 
       destinationId: form.destinationId ? Number(form.destinationId) : null,
     });
 
-    setForm(fixedDate ? { ...emptyForm, activityDate: fixedDate } : emptyForm);
+    if (!isEditing) {
+      setForm(fixedDate ? { ...emptyForm, activityDate: fixedDate } : emptyForm);
+    }
   }
+
+  const showFixedDate = fixedDate && !isEditing;
+  const resolvedSubmitLabel = submitLabel ?? (isEditing ? 'Sačuvaj izmene' : 'Dodaj aktivnost');
 
   return (
     <form className="card form-card nested-form" onSubmit={handleSubmit}>
-      <h3>Dodaj aktivnost</h3>
+      <h3>{isEditing ? 'Izmeni aktivnost' : 'Dodaj aktivnost'}</h3>
 
-      {fixedDate && (
+      {showFixedDate && (
         <p className="fixed-date-label">
           <strong>Datum:</strong> {fixedDate}
         </p>
@@ -77,7 +109,7 @@ export default function ActivityForm({ destinations, onSubmit, fixedDate = null 
       </label>
 
       <div className="form-row">
-        {!fixedDate && (
+        {!showFixedDate && (
           <label>
             Datum
             <input type="date" name="activityDate" value={form.activityDate} onChange={handleChange} />
@@ -128,7 +160,14 @@ export default function ActivityForm({ destinations, onSubmit, fixedDate = null 
         <textarea name="description" value={form.description} onChange={handleChange} rows={2} />
       </label>
 
-      <button type="submit" className="btn btn-primary">Dodaj aktivnost</button>
+      <div className="form-actions">
+        <button type="submit" className="btn btn-primary">{resolvedSubmitLabel}</button>
+        {onCancel && (
+          <button type="button" className="btn btn-secondary" onClick={onCancel}>
+            Otkaži
+          </button>
+        )}
+      </div>
     </form>
   );
 }

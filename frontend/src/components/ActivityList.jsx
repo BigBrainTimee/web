@@ -5,7 +5,13 @@ const STATUS_LABELS = {
   Cancelled: 'Otkazano',
 };
 
-export default function ActivityList({ activities, onDelete, readOnly = false }) {
+export default function ActivityList({
+  activities,
+  onDelete,
+  onEdit,
+  readOnly = false,
+  compact = false,
+}) {
   if (activities.length === 0) {
     return <p className="muted">Još nema aktivnosti za ovaj plan.</p>;
   }
@@ -19,31 +25,52 @@ export default function ActivityList({ activities, onDelete, readOnly = false })
 
   const dates = Object.keys(grouped).sort();
 
+  function renderActivity(activity) {
+    return (
+      <article key={activity.id} className="activity-card">
+        <div>
+          <strong>{activity.name}</strong>
+          <span className={`status-badge status-${activity.status.toLowerCase()}`}>
+            {STATUS_LABELS[activity.status] ?? activity.status}
+          </span>
+          {activity.activityTime && <p className="muted">Vreme: {activity.activityTime}</p>}
+          {activity.location && <p className="muted">{activity.location}</p>}
+          {activity.estimatedCost != null && <p>Proc. trošak: {activity.estimatedCost} €</p>}
+          {activity.description && <p>{activity.description}</p>}
+        </div>
+        {!readOnly && (onEdit || onDelete) && (
+          <div className="card-actions">
+            {onEdit && (
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => onEdit(activity)}>
+                Izmeni
+              </button>
+            )}
+            {onDelete && (
+              <button type="button" className="btn btn-danger btn-sm" onClick={() => onDelete(activity.id)}>
+                Obriši
+              </button>
+            )}
+          </div>
+        )}
+      </article>
+    );
+  }
+
+  if (compact) {
+    return (
+      <div className="activity-list">
+        {activities.map(renderActivity)}
+      </div>
+    );
+  }
+
   return (
     <div className="activity-calendar">
       {dates.map((date) => (
         <section key={date} className="calendar-day card">
           <h3 className="calendar-date">{date}</h3>
           <div className="activity-list">
-            {grouped[date].map((activity) => (
-              <article key={activity.id} className="activity-card">
-                <div>
-                  <strong>{activity.name}</strong>
-                  <span className={`status-badge status-${activity.status.toLowerCase()}`}>
-                    {STATUS_LABELS[activity.status] ?? activity.status}
-                  </span>
-                  {activity.activityTime && <p className="muted">Vreme: {activity.activityTime}</p>}
-                  {activity.location && <p className="muted">{activity.location}</p>}
-                  {activity.estimatedCost != null && <p>Proc. trošak: {activity.estimatedCost} €</p>}
-                  {activity.description && <p>{activity.description}</p>}
-                </div>
-                {!readOnly && onDelete && (
-                <button type="button" className="btn btn-danger" onClick={() => onDelete(activity.id)}>
-                  Obriši
-                </button>
-                )}
-              </article>
-            ))}
+            {grouped[date].map(renderActivity)}
           </div>
         </section>
       ))}

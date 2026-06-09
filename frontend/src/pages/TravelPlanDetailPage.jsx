@@ -7,7 +7,7 @@ import ChecklistForm from '../components/ChecklistForm';
 import ChecklistList from '../components/ChecklistList';
 import ExpenseForm from '../components/ExpenseForm';
 import ExpenseList from '../components/ExpenseList';
-import DestinationForm from '../components/DestinationForm';
+import DestinationForm, { destinationToFormValues } from '../components/DestinationForm';
 import DestinationList from '../components/DestinationList';
 import ShareLinkPanel from '../components/ShareLinkPanel';
 import TravelPlanForm from '../components/TravelPlanForm';
@@ -32,6 +32,7 @@ export default function TravelPlanDetailPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [editingDestination, setEditingDestination] = useState(null);
 
   async function loadData() {
     setLoading(true);
@@ -109,6 +110,19 @@ export default function TravelPlanDetailPage() {
     }
   }
 
+  async function handleUpdateDestination(payload) {
+    if (!editingDestination) return;
+
+    try {
+      await travelPlanService.updateDestination(token, id, editingDestination.id, payload);
+      setEditingDestination(null);
+      setSuccess('Destinacija je ažurirana.');
+      await loadData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Ažuriranje destinacije nije uspelo.');
+    }
+  }
+
   async function handleDeleteDestination(destinationId) {
     if (!window.confirm('Obrisati destinaciju?')) return;
 
@@ -128,6 +142,16 @@ export default function TravelPlanDetailPage() {
       await loadData();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Dodavanje aktivnosti nije uspelo.');
+    }
+  }
+
+  async function handleUpdateActivity(activityId, payload) {
+    try {
+      await travelPlanService.updateActivity(token, id, activityId, payload);
+      setSuccess('Aktivnost je ažurirana.');
+      await loadData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Ažuriranje aktivnosti nije uspelo.');
     }
   }
 
@@ -269,8 +293,17 @@ export default function TravelPlanDetailPage() {
 
       <section className="section-block">
         <h2>Destinacije</h2>
-        <DestinationList destinations={destinations} onDelete={handleDeleteDestination} />
-        <DestinationForm onSubmit={handleAddDestination} />
+        <DestinationList
+          destinations={destinations}
+          onDelete={handleDeleteDestination}
+          onEdit={setEditingDestination}
+        />
+        <DestinationForm
+          key={editingDestination?.id ?? 'new-destination'}
+          initialValues={editingDestination ? destinationToFormValues(editingDestination) : null}
+          onSubmit={editingDestination ? handleUpdateDestination : handleAddDestination}
+          onCancel={editingDestination ? () => setEditingDestination(null) : undefined}
+        />
       </section>
 
       <ActivitySection
@@ -279,6 +312,7 @@ export default function TravelPlanDetailPage() {
         plan={plan}
         onDelete={handleDeleteActivity}
         onSubmit={handleAddActivity}
+        onUpdate={handleUpdateActivity}
       />
 
       <section className="section-block">

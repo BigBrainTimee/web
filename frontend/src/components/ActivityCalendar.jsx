@@ -16,6 +16,7 @@ export default function ActivityCalendar({
   selectedDate,
   onSelectedDateChange,
   onDelete,
+  onEdit,
   readOnly = false,
 }) {
   const initial = getInitialMonth(planStartDate, planEndDate);
@@ -150,7 +151,9 @@ export default function ActivityCalendar({
             <ActivityList
               activities={selectedActivities}
               onDelete={onDelete}
+              onEdit={onEdit}
               readOnly={readOnly}
+              compact
             />
           )}
         </div>
