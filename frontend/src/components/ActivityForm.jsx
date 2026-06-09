@@ -1,15 +1,11 @@
 import { useEffect, useState } from 'react';
 
-const STATUS_OPTIONS = ['Planned', 'Reserved', 'Completed', 'Cancelled'];
-
 const emptyForm = {
   name: '',
   activityDate: '',
   activityTime: '',
-  location: '',
   description: '',
   estimatedCost: '',
-  status: 'Planned',
   destinationId: '',
 };
 
@@ -18,12 +14,20 @@ export function activityToFormValues(activity) {
     name: activity.name,
     activityDate: activity.activityDate,
     activityTime: activity.activityTime ?? '',
-    location: activity.location ?? '',
     description: activity.description ?? '',
     estimatedCost: activity.estimatedCost ?? '',
-    status: activity.status,
     destinationId: activity.destinationId ?? '',
   };
+}
+
+function buildEmptyForm(fixedDate, defaultDestinationId) {
+  const form = fixedDate ? { ...emptyForm, activityDate: fixedDate } : { ...emptyForm };
+
+  if (defaultDestinationId) {
+    form.destinationId = String(defaultDestinationId);
+  }
+
+  return form;
 }
 
 export default function ActivityForm({
@@ -31,13 +35,16 @@ export default function ActivityForm({
   onSubmit,
   onCancel,
   fixedDate = null,
+  defaultDestinationId = null,
+  planStartDate = null,
+  planEndDate = null,
   initialValues = null,
   submitLabel,
 }) {
   const isEditing = Boolean(initialValues);
   const [form, setForm] = useState(() => {
     if (initialValues) return initialValues;
-    return fixedDate ? { ...emptyForm, activityDate: fixedDate } : emptyForm;
+    return buildEmptyForm(fixedDate, defaultDestinationId);
   });
   const [errors, setErrors] = useState({});
 
@@ -48,9 +55,9 @@ export default function ActivityForm({
       return;
     }
 
-    setForm(fixedDate ? { ...emptyForm, activityDate: fixedDate } : emptyForm);
+    setForm(buildEmptyForm(fixedDate, defaultDestinationId));
     setErrors({});
-  }, [initialValues, fixedDate]);
+  }, [initialValues, fixedDate, defaultDestinationId]);
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -60,8 +67,17 @@ export default function ActivityForm({
 
   function validate() {
     const nextErrors = {};
-    if (!form.name.trim()) nextErrors.name = 'Naziv je obavezan.';
+    const trimmedName = form.name.trim();
+
+    if (!trimmedName) nextErrors.name = 'Naziv je obavezan.';
+    else if (trimmedName.length < 2) nextErrors.name = 'Naziv mora imati bar 2 karaktera.';
     if (!form.activityDate) nextErrors.activityDate = 'Datum je obavezan.';
+    if (planStartDate && form.activityDate && form.activityDate < planStartDate) {
+      nextErrors.activityDate = `Datum mora biti u periodu putovanja (${planStartDate} – ${planEndDate}).`;
+    }
+    if (planEndDate && form.activityDate && form.activityDate > planEndDate) {
+      nextErrors.activityDate = `Datum mora biti u periodu putovanja (${planStartDate} – ${planEndDate}).`;
+    }
     if (form.estimatedCost !== '' && Number(form.estimatedCost) < 0) {
       nextErrors.estimatedCost = 'Trošak ne može biti negativan.';
     }
@@ -73,38 +89,56 @@ export default function ActivityForm({
     event.preventDefault();
     if (!validate()) return;
 
-    await onSubmit({
+    const payload = {
       name: form.name.trim(),
       activityDate: form.activityDate,
-      activityTime: form.activityTime || null,
-      location: form.location.trim() || null,
-      description: form.description.trim() || null,
-      estimatedCost: form.estimatedCost === '' ? null : Number(form.estimatedCost),
-      status: form.status,
-      destinationId: form.destinationId ? Number(form.destinationId) : null,
-    });
+      status: 'Planned',
+    };
+
+    if (form.activityTime) {
+      payload.activityTime = form.activityTime;
+    }
+
+    const description = form.description.trim();
+    if (description) payload.description = description;
+
+    if (form.estimatedCost !== '') {
+      payload.estimatedCost = Number(form.estimatedCost);
+    }
+
+    if (form.destinationId) {
+      payload.destinationId = Number(form.destinationId);
+    }
+
+    await onSubmit(payload);
 
     if (!isEditing) {
-      setForm(fixedDate ? { ...emptyForm, activityDate: fixedDate } : emptyForm);
+      setForm(buildEmptyForm(fixedDate, defaultDestinationId));
     }
   }
 
   const showFixedDate = fixedDate && !isEditing;
   const resolvedSubmitLabel = submitLabel ?? (isEditing ? 'Sačuvaj izmene' : 'Dodaj aktivnost');
+  const autoSelectedDestination = !isEditing && defaultDestinationId
+    ? destinations.find((destination) => destination.id === defaultDestinationId)
+    : null;
 
   return (
     <form className="card form-card nested-form" onSubmit={handleSubmit}>
       <h3>{isEditing ? 'Izmeni aktivnost' : 'Dodaj aktivnost'}</h3>
 
       {showFixedDate && (
-        <p className="fixed-date-label">
-          <strong>Datum:</strong> {fixedDate}
-        </p>
+        <>
+          <p className="fixed-date-label">
+            <strong>Datum:</strong> {fixedDate}
+          </p>
+          <input type="hidden" name="activityDate" value={form.activityDate} readOnly />
+        </>
       )}
 
       <label>
         Naziv
-        <input name="name" value={form.name} onChange={handleChange} />
+        <input name="name" value={form.name} onChange={handleChange} placeholder="npr. Obilazak muzeja" />
         {errors.name && <span className="field-error">{errors.name}</span>}
       </label>
 
@@ -112,7 +146,14 @@ export default function ActivityForm({
         {!showFixedDate && (
           <label>
             Datum
-            <input type="date" name="activityDate" value={form.activityDate} onChange={handleChange} />
+            <input
+              type="date"
+              name="activityDate"
+              value={form.activityDate}
+              onChange={handleChange}
+              min={planStartDate ?? undefined}
+              max={planEndDate ?? undefined}
+            />
             {errors.activityDate && <span className="field-error">{errors.activityDate}</span>}
           </label>
         )}
@@ -123,25 +164,11 @@ export default function ActivityForm({
       </div>
 
       <label>
-        Lokacija
-        <input name="location" value={form.location} onChange={handleChange} />
+        Procijenjeni trošak (€)
+        <input type="number" min="0" step="0.01" name="estimatedCost" value={form.estimatedCost} onChange={handleChange} />
+        {errors.estimatedCost && <span className="field-error">{errors.estimatedCost}</span>}
+        <span className="field-hint muted">Pojavljuje se u Troškovima kao procijenjeni trošak.</span>
       </label>
-
-      <div className="form-row">
-        <label>
-          Status
-          <select name="status" value={form.status} onChange={handleChange}>
-            {STATUS_OPTIONS.map((status) => (
-              <option key={status} value={status}>{status}</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Proc. trošak (€)
-          <input type="number" min="0" step="0.01" name="estimatedCost" value={form.estimatedCost} onChange={handleChange} />
-          {errors.estimatedCost && <span className="field-error">{errors.estimatedCost}</span>}
-        </label>
-      </div>
 
       {destinations.length > 0 && (
         <label>
@@ -152,6 +179,11 @@ export default function ActivityForm({
               <option key={d.id} value={d.id}>{d.name}</option>
             ))}
           </select>
+          {autoSelectedDestination && (
+            <span className="field-hint muted">
+              Automatski izabrano: {autoSelectedDestination.name} (već si na ovoj destinaciji taj dan).
+            </span>
+          )}
         </label>
       )}
 

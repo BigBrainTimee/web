@@ -22,16 +22,28 @@ export default function DestinationForm({
   onSubmit,
   onCancel,
   initialValues = null,
+  fixedArrivalDate = null,
+  planStartDate = null,
+  planEndDate = null,
   submitLabel,
 }) {
   const isEditing = Boolean(initialValues);
-  const [form, setForm] = useState(() => initialValues ?? emptyForm);
+  const [form, setForm] = useState(() => {
+    if (initialValues) return initialValues;
+    return fixedArrivalDate ? { ...emptyForm, arrivalDate: fixedArrivalDate } : emptyForm;
+  });
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    setForm(initialValues ?? emptyForm);
+    if (initialValues) {
+      setForm(initialValues);
+      setErrors({});
+      return;
+    }
+
+    setForm(fixedArrivalDate ? { ...emptyForm, arrivalDate: fixedArrivalDate } : emptyForm);
     setErrors({});
-  }, [initialValues]);
+  }, [initialValues, fixedArrivalDate]);
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -48,6 +60,18 @@ export default function DestinationForm({
     if (!form.departureDate) nextErrors.departureDate = 'Datum odlaska je obavezan.';
     if (form.arrivalDate && form.departureDate && form.departureDate < form.arrivalDate) {
       nextErrors.departureDate = 'Datum odlaska ne može biti pre dolaska.';
+    }
+    if (planStartDate && form.arrivalDate && form.arrivalDate < planStartDate) {
+      nextErrors.arrivalDate = `Dolazak mora biti u periodu putovanja (${planStartDate} – ${planEndDate}).`;
+    }
+    if (planEndDate && form.arrivalDate && form.arrivalDate > planEndDate) {
+      nextErrors.arrivalDate = `Dolazak mora biti u periodu putovanja (${planStartDate} – ${planEndDate}).`;
+    }
+    if (planStartDate && form.departureDate && form.departureDate < planStartDate) {
+      nextErrors.departureDate = `Odlazak mora biti u periodu putovanja (${planStartDate} – ${planEndDate}).`;
+    }
+    if (planEndDate && form.departureDate && form.departureDate > planEndDate) {
+      nextErrors.departureDate = `Odlazak mora biti u periodu putovanja (${planStartDate} – ${planEndDate}).`;
     }
 
     setErrors(nextErrors);
@@ -92,12 +116,27 @@ export default function DestinationForm({
       <div className="form-row">
         <label>
           Dolazak
-          <input type="date" name="arrivalDate" value={form.arrivalDate} onChange={handleChange} />
+          <input
+            type="date"
+            name="arrivalDate"
+            value={form.arrivalDate}
+            onChange={handleChange}
+            min={planStartDate ?? undefined}
+            max={planEndDate ?? undefined}
+            readOnly={Boolean(fixedArrivalDate && !isEditing)}
+          />
           {errors.arrivalDate && <span className="field-error">{errors.arrivalDate}</span>}
         </label>
         <label>
           Odlazak
-          <input type="date" name="departureDate" value={form.departureDate} onChange={handleChange} />
+          <input
+            type="date"
+            name="departureDate"
+            value={form.departureDate}
+            onChange={handleChange}
+            min={form.arrivalDate || planStartDate || undefined}
+            max={planEndDate ?? undefined}
+          />
           {errors.departureDate && <span className="field-error">{errors.departureDate}</span>}
         </label>
       </div>

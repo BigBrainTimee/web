@@ -1,4 +1,5 @@
 using Microsoft.ServiceFabric.Services.Runtime;
+using QuestPDF.Infrastructure;
 using System.Diagnostics;
 using System.Threading;
 
@@ -8,6 +9,8 @@ internal static class Program
 {
     private static void Main()
     {
+        QuestPDF.Settings.License = LicenseType.Community;
+
         try
         {
             ServiceRuntime.RegisterServiceAsync("TravelServiceType",

@@ -201,13 +201,18 @@ public class BudgetServiceImpl : IBudgetService
             .ToListAsync(cancellationToken);
 
         var totalSpent = byCategory.Sum(c => c.Amount);
+        var totalEstimated = await _dbContext.Activities
+            .AsNoTracking()
+            .Where(a => a.TravelPlanId == planId && a.EstimatedCost != null)
+            .SumAsync(a => a.EstimatedCost ?? 0, cancellationToken);
 
         return new BudgetSummaryDto
         {
             TravelPlanId = planId,
             PlannedBudget = plan.PlannedBudget,
             TotalSpent = totalSpent,
-            Remaining = plan.PlannedBudget - totalSpent,
+            TotalEstimated = totalEstimated,
+            Remaining = plan.PlannedBudget - totalSpent - totalEstimated,
             ByCategory = byCategory
         };
     }

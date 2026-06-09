@@ -5,16 +5,17 @@ import ActivitySection from '../components/ActivitySection';
 import BudgetSummary from '../components/BudgetSummary';
 import ChecklistForm from '../components/ChecklistForm';
 import ChecklistList from '../components/ChecklistList';
-import ExpenseForm from '../components/ExpenseForm';
-import ExpenseList from '../components/ExpenseList';
-import DestinationForm, { destinationToFormValues } from '../components/DestinationForm';
-import DestinationList from '../components/DestinationList';
+import ExpensesSection from '../components/ExpensesSection';
+import DestinationSection from '../components/DestinationSection';
+import PlanSectionNav, { getPlanSections, PLAN_SECTIONS } from '../components/PlanSectionNav';
 import ShareLinkPanel from '../components/ShareLinkPanel';
 import TravelPlanForm from '../components/TravelPlanForm';
 import { useAuth } from '../context/AuthContext';
 import { ApiError } from '../services/apiClient';
 import * as budgetService from '../services/budgetService';
 import * as travelPlanService from '../services/travelPlanService';
+
+const sections = getPlanSections({ includeSharing: true });
 
 export default function TravelPlanDetailPage() {
   const { id } = useParams();
@@ -29,10 +30,10 @@ export default function TravelPlanDetailPage() {
   const [budgetSummary, setBudgetSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
+  const [activeSection, setActiveSection] = useState('overview');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [downloadingPdf, setDownloadingPdf] = useState(false);
-  const [editingDestination, setEditingDestination] = useState(null);
 
   async function loadData() {
     setLoading(true);
@@ -63,6 +64,20 @@ export default function TravelPlanDetailPage() {
   useEffect(() => {
     loadData();
   }, [token, id]);
+
+  function handleSectionChange(sectionId) {
+    setActiveSection(sectionId);
+  }
+
+  function toggleEditing() {
+    setEditing((prev) => {
+      const next = !prev;
+      if (next) {
+        setActiveSection('overview');
+      }
+      return next;
+    });
+  }
 
   async function handleUpdate(payload) {
     try {
@@ -110,12 +125,9 @@ export default function TravelPlanDetailPage() {
     }
   }
 
-  async function handleUpdateDestination(payload) {
-    if (!editingDestination) return;
-
+  async function handleUpdateDestination(destinationId, payload) {
     try {
-      await travelPlanService.updateDestination(token, id, editingDestination.id, payload);
-      setEditingDestination(null);
+      await travelPlanService.updateDestination(token, id, destinationId, payload);
       setSuccess('Destinacija je ažurirana.');
       await loadData();
     } catch (err) {
@@ -220,6 +232,104 @@ export default function TravelPlanDetailPage() {
     }
   }
 
+  function renderSectionContent() {
+    switch (activeSection) {
+      case 'overview':
+        return (
+          <div className="plan-detail-panel">
+            <h2>{PLAN_SECTIONS.overview.label}</h2>
+            {editing ? (
+              <TravelPlanForm
+                initialValues={{
+                  name: plan.name,
+                  description: plan.description,
+                  startDate: plan.startDate,
+                  endDate: plan.endDate,
+                  plannedBudget: plan.plannedBudget,
+                  notes: plan.notes,
+                }}
+                submitLabel="Sačuvaj izmene"
+                onSubmit={handleUpdate}
+              />
+            ) : (
+              <section className="card plan-summary">
+                <p><strong>Budžet:</strong> {plan.plannedBudget} €</p>
+                {plan.description && <p><strong>Opis:</strong> {plan.description}</p>}
+                {plan.notes && <p><strong>Napomene:</strong> {plan.notes}</p>}
+              </section>
+            )}
+            <BudgetSummary summary={budgetSummary} activities={activities} />
+          </div>
+        );
+
+      case 'expenses':
+        return (
+          <div className="plan-detail-panel">
+            <h2>{PLAN_SECTIONS.expenses.label}</h2>
+            <ExpensesSection
+              expenses={expenses}
+              activities={activities}
+              onAddExpense={handleAddExpense}
+              onDeleteExpense={handleDeleteExpense}
+            />
+          </div>
+        );
+
+      case 'destinations':
+        return (
+          <div className="plan-detail-panel">
+            <h2>{PLAN_SECTIONS.destinations.label}</h2>
+            <DestinationSection
+              destinations={destinations}
+              plan={plan}
+              onDelete={handleDeleteDestination}
+              onSubmit={handleAddDestination}
+              onUpdate={handleUpdateDestination}
+            />
+          </div>
+        );
+
+      case 'activities':
+        return (
+          <div className="plan-detail-panel">
+            <h2>{PLAN_SECTIONS.activities.label}</h2>
+            <ActivitySection
+              activities={activities}
+              destinations={destinations}
+              plan={plan}
+              onDelete={handleDeleteActivity}
+              onSubmit={handleAddActivity}
+              onUpdate={handleUpdateActivity}
+            />
+          </div>
+        );
+
+      case 'sharing':
+        return (
+          <div className="plan-detail-panel">
+            <h2>{PLAN_SECTIONS.sharing.label}</h2>
+            <ShareLinkPanel authToken={token} planId={id} />
+          </div>
+        );
+
+      case 'checklist':
+        return (
+          <div className="plan-detail-panel">
+            <h2>{PLAN_SECTIONS.checklist.label}</h2>
+            <ChecklistList
+              items={checklistItems}
+              onToggle={handleToggleChecklistItem}
+              onDelete={handleDeleteChecklistItem}
+            />
+            <ChecklistForm onSubmit={handleAddChecklistItem} />
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  }
+
   if (loading) {
     return <div className="page">Učitavanje plana...</div>;
   }
@@ -250,7 +360,7 @@ export default function TravelPlanDetailPage() {
           >
             {downloadingPdf ? 'Generisanje PDF-a...' : 'Preuzmi PDF'}
           </button>
-          <button type="button" className="btn btn-secondary" onClick={() => setEditing((prev) => !prev)}>
+          <button type="button" className="btn btn-secondary" onClick={toggleEditing}>
             {editing ? 'Otkaži izmenu' : 'Izmeni plan'}
           </button>
           <button type="button" className="btn btn-danger" onClick={handleDeletePlan}>
@@ -262,73 +372,16 @@ export default function TravelPlanDetailPage() {
       <AlertMessage message={error} onClose={() => setError('')} />
       <AlertMessage type="success" message={success} onClose={() => setSuccess('')} />
 
-      {editing ? (
-        <TravelPlanForm
-          initialValues={{
-            name: plan.name,
-            description: plan.description,
-            startDate: plan.startDate,
-            endDate: plan.endDate,
-            plannedBudget: plan.plannedBudget,
-            notes: plan.notes,
-          }}
-          submitLabel="Sačuvaj izmene"
-          onSubmit={handleUpdate}
+      <div className="plan-detail-layout">
+        <PlanSectionNav
+          sections={sections}
+          activeSection={activeSection}
+          onSectionChange={handleSectionChange}
         />
-      ) : (
-        <section className="card plan-summary">
-          <p><strong>Budžet:</strong> {plan.plannedBudget} €</p>
-          {plan.description && <p><strong>Opis:</strong> {plan.description}</p>}
-          {plan.notes && <p><strong>Napomene:</strong> {plan.notes}</p>}
-        </section>
-      )}
-
-      <BudgetSummary summary={budgetSummary} />
-
-      <section className="section-block">
-        <h2>Troškovi</h2>
-        <ExpenseList expenses={expenses} onDelete={handleDeleteExpense} />
-        <ExpenseForm onSubmit={handleAddExpense} />
-      </section>
-
-      <section className="section-block">
-        <h2>Destinacije</h2>
-        <DestinationList
-          destinations={destinations}
-          onDelete={handleDeleteDestination}
-          onEdit={setEditingDestination}
-        />
-        <DestinationForm
-          key={editingDestination?.id ?? 'new-destination'}
-          initialValues={editingDestination ? destinationToFormValues(editingDestination) : null}
-          onSubmit={editingDestination ? handleUpdateDestination : handleAddDestination}
-          onCancel={editingDestination ? () => setEditingDestination(null) : undefined}
-        />
-      </section>
-
-      <ActivitySection
-        activities={activities}
-        destinations={destinations}
-        plan={plan}
-        onDelete={handleDeleteActivity}
-        onSubmit={handleAddActivity}
-        onUpdate={handleUpdateActivity}
-      />
-
-      <section className="section-block">
-        <h2>Deljenje plana</h2>
-        <ShareLinkPanel authToken={token} planId={id} />
-      </section>
-
-      <section className="section-block">
-        <h2>Packing lista</h2>
-        <ChecklistList
-          items={checklistItems}
-          onToggle={handleToggleChecklistItem}
-          onDelete={handleDeleteChecklistItem}
-        />
-        <ChecklistForm onSubmit={handleAddChecklistItem} />
-      </section>
+        <div className="plan-detail-content">
+          {renderSectionContent()}
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 using System.Fabric;
 using System.IO;
 using System.Text;
+using Microsoft.Extensions.Hosting;
 using TravelService.Configuration;
 using TravelService.Data;
 using TravelService.Services;
@@ -20,6 +21,11 @@ internal sealed class TravelServiceHost : StatefulService
     public TravelServiceHost(StatefulServiceContext context)
         : base(context)
     {
+    }
+
+    protected override async Task RunAsync(CancellationToken cancellationToken)
+    {
+        await Task.Delay(Timeout.Infinite, cancellationToken);
     }
 
     protected override IEnumerable<ServiceReplicaListener> CreateServiceReplicaListeners()
@@ -67,6 +73,10 @@ internal sealed class TravelServiceHost : StatefulService
 
                     builder.Services.AddAuthorization();
                     builder.Services.AddControllers();
+                    builder.Services.Configure<HostOptions>(options =>
+                    {
+                        options.ShutdownTimeout = TimeSpan.FromSeconds(15);
+                    });
 
                     builder.WebHost
                         .UseKestrel()

@@ -12,6 +12,7 @@ public class BudgetDbContext : DbContext
 
     public DbSet<TravelPlan> TravelPlans => Set<TravelPlan>();
     public DbSet<Expense> Expenses => Set<Expense>();
+    public DbSet<Activity> Activities => Set<Activity>();
     public DbSet<ShareLink> ShareLinks => Set<ShareLink>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -35,6 +36,15 @@ public class BudgetDbContext : DbContext
                 .HasForeignKey(e => e.TravelPlanId)
                 .OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(e => e.TravelPlanId);
+        });
+
+        modelBuilder.Entity<Activity>(entity =>
+        {
+            entity.ToTable("Activities");
+            entity.HasKey(a => a.Id);
+            entity.Property(a => a.Name).HasMaxLength(200).IsRequired();
+            entity.Property(a => a.EstimatedCost).HasColumnType("decimal(18,2)");
+            entity.HasIndex(a => a.TravelPlanId);
         });
 
         modelBuilder.Entity<ShareLink>(entity =>

@@ -7,11 +7,6 @@ namespace TravelService.Services;
 
 public class PlanReportPdfGenerator : IPlanReportPdfGenerator
 {
-    static PlanReportPdfGenerator()
-    {
-        QuestPDF.Settings.License = LicenseType.Community;
-    }
-
     public byte[] Generate(TravelPlanReportDto report)
     {
         return Document.Create(container =>
@@ -104,7 +99,8 @@ public class PlanReportPdfGenerator : IPlanReportPdfGenerator
         column.Item().Row(row =>
         {
             row.RelativeItem().Element(c => StatBox(c, "Planirano", $"{summary.PlannedBudget:N2} €"));
-            row.RelativeItem().Element(c => StatBox(c, "Potrošeno", $"{summary.TotalSpent:N2} €"));
+            row.RelativeItem().Element(c => StatBox(c, "Sigurno", $"{summary.TotalSpent:N2} €"));
+            row.RelativeItem().Element(c => StatBox(c, "Procijenjeno", $"{summary.TotalEstimated:N2} €"));
             row.RelativeItem().Element(c => StatBox(c, "Preostalo", $"{summary.Remaining:N2} €"));
         });
 

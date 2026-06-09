@@ -80,6 +80,29 @@ public class UserAuthService : IUserAuthService
         return user is null ? null : UserMapper.ToResponseDto(user);
     }
 
+    public async Task<UserResponseDto> CreateUserAsync(
+        AdminCreateUserDto request,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+
+        var emailExists = await _dbContext.Users
+            .AnyAsync(u => u.Email == normalizedEmail, cancellationToken);
+
+        if (emailExists)
+        {
+            throw new InvalidOperationException("A user with this email already exists.");
+        }
+
+        var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
+        var user = UserMapper.ToEntity(request.Name, request.Email, passwordHash, request.Role);
+
+        _dbContext.Users.Add(user);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return UserMapper.ToResponseDto(user);
+    }
+
     public async Task<UserResponseDto?> UpdateUserRoleAsync(
         int adminUserId,
         int targetUserId,

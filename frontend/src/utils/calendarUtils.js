@@ -50,4 +50,42 @@ export function formatMonthTitle(year, month) {
   return `${MONTH_LABELS[month]} ${year}`;
 }
 
+export function addDays(dateKey, days) {
+  const { year, month, day } = parseDateKey(dateKey);
+  const next = new Date(year, month, day + days);
+  return toDateKey(next.getFullYear(), next.getMonth(), next.getDate());
+}
+
+export function isDateInSpan(dateKey, startDate, endDate) {
+  return dateKey >= startDate && dateKey <= endDate;
+}
+
+export function getDestinationsForDate(destinations, dateKey) {
+  if (!dateKey) return [];
+
+  return destinations.filter(
+    (destination) => dateKey >= destination.arrivalDate && dateKey <= destination.departureDate,
+  );
+}
+
+export function buildDestinationsByDate(destinations, planStartDate, planEndDate) {
+  return destinations.reduce((acc, destination) => {
+    const spanStart = destination.arrivalDate < planStartDate ? planStartDate : destination.arrivalDate;
+    const spanEnd = destination.departureDate > planEndDate ? planEndDate : destination.departureDate;
+
+    if (spanStart > spanEnd) {
+      return acc;
+    }
+
+    let current = spanStart;
+    while (current <= spanEnd) {
+      if (!acc[current]) acc[current] = [];
+      acc[current].push(destination);
+      current = addDays(current, 1);
+    }
+
+    return acc;
+  }, {});
+}
+
 export { WEEKDAY_LABELS };

@@ -217,6 +217,12 @@ textarea {
   font-weight: 500;
 }
 
+.field-hint {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+}
+
 .muted {
   color: #6b7280;
 }
@@ -250,6 +256,75 @@ textarea {
 
 .section-block {
   margin-top: 2rem;
+}
+
+.plan-detail-layout {
+  display: grid;
+  grid-template-columns: minmax(200px, 220px) 1fr;
+  gap: 1.5rem;
+  align-items: start;
+  margin-top: 1.5rem;
+}
+
+.plan-detail-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  position: sticky;
+  top: 1rem;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 0.65rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.plan-detail-nav button {
+  text-align: left;
+  border: none;
+  background: transparent;
+  padding: 0.7rem 0.85rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.95rem;
+  color: #374151;
+  transition: background 0.15s, color 0.15s;
+}
+
+.plan-detail-nav button:hover {
+  background: #f3f4f6;
+}
+
+.plan-detail-nav button.active {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.plan-detail-content {
+  min-width: 0;
+}
+
+.plan-detail-panel {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.plan-detail-panel > h2 {
+  margin: 0 0 1.25rem;
+  font-size: 1.25rem;
+}
+
+.plan-detail-content .section-block {
+  margin-top: 0;
+}
+
+.plan-detail-content .section-block > h2,
+.plan-detail-content .section-header-row h2 {
+  display: none;
 }
 
 .plan-summary p {
@@ -405,7 +480,8 @@ textarea {
   font-weight: 700;
 }
 
-.month-calendar-cell.has-activities .month-calendar-day-num {
+.month-calendar-cell.has-activities .month-calendar-day-num,
+.month-calendar-cell.has-destinations .month-calendar-day-num {
   font-weight: 600;
 }
 
@@ -563,9 +639,55 @@ select {
 
 .budget-stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 1rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.budget-summary-note {
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+}
+
+.admin-user-form {
+  margin-bottom: 1.5rem;
+}
+
+.admin-user-form h2 {
+  margin: 0 0 1rem;
+  font-size: 1.15rem;
+}
+
+.budget-subtitle {
+  margin: 1rem 0 0.5rem;
+  font-size: 0.95rem;
+  color: #374151;
+}
+
+.expenses-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.expenses-column h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+}
+
+.expenses-column-hint {
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+}
+
+.badge-estimated {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.estimated-expense-row {
+  border-left: 3px solid #f59e0b;
 }
 
 .stat-label {
@@ -616,6 +738,24 @@ select {
   justify-content: space-between;
   padding: 0.5rem 0;
   border-bottom: 1px solid #f3f4f6;
+}
+
+.estimated-breakdown li {
+  background: #fffbeb;
+  border-bottom-color: #fde68a;
+  padding: 0.5rem 0.65rem;
+  border-radius: 6px;
+}
+
+.estimated-breakdown-label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+}
+
+.estimated-breakdown-date {
+  font-size: 0.85rem;
 }
 
 .item-list {
@@ -776,6 +916,10 @@ select {
   }
 
   .budget-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .expenses-split {
     grid-template-columns: 1fr;
   }
 
@@ -833,6 +977,24 @@ select {
   .shared-banner {
     font-size: 0.9rem;
     line-height: 1.4;
+  }
+
+  .plan-detail-layout {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .plan-detail-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    position: static;
+  }
+
+  .plan-detail-nav button {
+    flex: 1 1 auto;
+    text-align: center;
+    padding: 0.55rem 0.65rem;
+    font-size: 0.85rem;
   }
 }
 

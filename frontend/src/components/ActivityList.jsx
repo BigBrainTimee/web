@@ -1,10 +1,3 @@
-const STATUS_LABELS = {
-  Planned: 'Planirano',
-  Reserved: 'Rezervisano',
-  Completed: 'Završeno',
-  Cancelled: 'Otkazano',
-};
-
 export default function ActivityList({
   activities,
   onDelete,
@@ -30,12 +23,10 @@ export default function ActivityList({
       <article key={activity.id} className="activity-card">
         <div>
           <strong>{activity.name}</strong>
-          <span className={`status-badge status-${activity.status.toLowerCase()}`}>
-            {STATUS_LABELS[activity.status] ?? activity.status}
-          </span>
           {activity.activityTime && <p className="muted">Vreme: {activity.activityTime}</p>}
-          {activity.location && <p className="muted">{activity.location}</p>}
-          {activity.estimatedCost != null && <p>Proc. trošak: {activity.estimatedCost} €</p>}
+          {activity.estimatedCost != null && activity.estimatedCost > 0 && (
+            <p className="muted">Procijenjeno: {activity.estimatedCost} €</p>
+          )}
           {activity.description && <p>{activity.description}</p>}
         </div>
         {!readOnly && (onEdit || onDelete) && (

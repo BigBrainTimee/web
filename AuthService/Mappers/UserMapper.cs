@@ -19,12 +19,17 @@ public static class UserMapper
 
     public static User ToEntity(RegisterRequestDto dto, string passwordHash)
     {
+        return ToEntity(dto.Name, dto.Email, passwordHash, "User");
+    }
+
+    public static User ToEntity(string name, string email, string passwordHash, string role)
+    {
         return new User
         {
-            Name = dto.Name.Trim(),
-            Email = dto.Email.Trim().ToLowerInvariant(),
+            Name = name.Trim(),
+            Email = email.Trim().ToLowerInvariant(),
             PasswordHash = passwordHash,
-            Role = "User",
+            Role = NormalizeRole(role),
             CreatedAt = DateTime.UtcNow
         };
     }

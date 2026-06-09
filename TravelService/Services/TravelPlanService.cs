@@ -690,6 +690,9 @@ public class TravelPlanService : ITravelPlanService
             .ToList();
 
         var totalSpent = byCategory.Sum(c => c.Amount);
+        var totalEstimated = activities
+            .Where(a => a.EstimatedCost.HasValue)
+            .Sum(a => a.EstimatedCost ?? 0);
 
         return new TravelPlanReportDto
         {
@@ -703,7 +706,8 @@ public class TravelPlanService : ITravelPlanService
                 TravelPlanId = planId,
                 PlannedBudget = plan.PlannedBudget,
                 TotalSpent = totalSpent,
-                Remaining = plan.PlannedBudget - totalSpent,
+                TotalEstimated = totalEstimated,
+                Remaining = plan.PlannedBudget - totalSpent - totalEstimated,
                 ByCategory = byCategory
             }
         };

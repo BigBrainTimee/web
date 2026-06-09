@@ -1,11 +1,9 @@
-import { useMemo, useState } from 'react';
-import { getDestinationsForDate } from '../utils/calendarUtils';
-import ActivityCalendar from './ActivityCalendar';
-import ActivityForm, { activityToFormValues } from './ActivityForm';
-import ActivityList from './ActivityList';
+import { useState } from 'react';
+import DestinationCalendar from './DestinationCalendar';
+import DestinationForm, { destinationToFormValues } from './DestinationForm';
+import DestinationList from './DestinationList';
 
-export default function ActivitySection({
-  activities,
+export default function DestinationSection({
   destinations,
   plan,
   onDelete,
@@ -15,27 +13,27 @@ export default function ActivitySection({
 }) {
   const [view, setView] = useState('calendar');
   const [selectedCalendarDate, setSelectedCalendarDate] = useState(null);
-  const [editingActivity, setEditingActivity] = useState(null);
+  const [editingDestination, setEditingDestination] = useState(null);
 
   function handleViewChange(nextView) {
     setView(nextView);
     if (nextView === 'list') {
       setSelectedCalendarDate(null);
     }
-    setEditingActivity(null);
+    setEditingDestination(null);
   }
 
-  function handleEdit(activity) {
-    setEditingActivity(activity);
+  function handleEdit(destination) {
+    setEditingDestination(destination);
     if (view === 'calendar') {
-      setSelectedCalendarDate(activity.activityDate);
+      setSelectedCalendarDate(destination.arrivalDate);
     }
   }
 
   async function handleFormSubmit(payload) {
-    if (editingActivity && onUpdate) {
-      await onUpdate(editingActivity.id, payload);
-      setEditingActivity(null);
+    if (editingDestination && onUpdate) {
+      await onUpdate(editingDestination.id, payload);
+      setEditingDestination(null);
       return;
     }
 
@@ -45,21 +43,14 @@ export default function ActivitySection({
   }
 
   const showForm = !readOnly && (onSubmit || onUpdate) && (
-    editingActivity || (view === 'calendar' && selectedCalendarDate)
+    editingDestination || (view === 'calendar' && selectedCalendarDate)
   );
-
-  const defaultDestinationId = useMemo(() => {
-    if (editingActivity || !selectedCalendarDate) return null;
-
-    const matches = getDestinationsForDate(destinations, selectedCalendarDate);
-    return matches[0]?.id ?? null;
-  }, [destinations, selectedCalendarDate, editingActivity]);
 
   return (
     <section className="section-block">
       <div className="section-header-row">
-        <h2>Aktivnosti po danima</h2>
-        <div className="view-toggle" role="tablist" aria-label="Prikaz aktivnosti">
+        <h2>Destinacije</h2>
+        <div className="view-toggle" role="tablist" aria-label="Prikaz destinacija">
           <button
             type="button"
             role="tab"
@@ -82,43 +73,41 @@ export default function ActivitySection({
       </div>
 
       {view === 'calendar' ? (
-        <ActivityCalendar
-          activities={activities}
+        <DestinationCalendar
+          destinations={destinations}
           planStartDate={plan.startDate}
           planEndDate={plan.endDate}
           selectedDate={selectedCalendarDate}
           onSelectedDateChange={(date) => {
             setSelectedCalendarDate(date);
-            setEditingActivity(null);
+            setEditingDestination(null);
           }}
           onDelete={onDelete}
           onEdit={readOnly ? undefined : handleEdit}
           readOnly={readOnly}
         />
       ) : (
-        <ActivityList
-          activities={activities}
+        <DestinationList
+          destinations={destinations}
           onDelete={onDelete}
           onEdit={readOnly ? undefined : handleEdit}
           readOnly={readOnly}
         />
       )}
 
-      {!readOnly && view === 'calendar' && !selectedCalendarDate && !editingActivity && (
-        <p className="muted calendar-form-hint">Izaberi dan u kalendaru da dodaš aktivnost.</p>
+      {!readOnly && view === 'calendar' && !selectedCalendarDate && !editingDestination && (
+        <p className="muted calendar-form-hint">Izaberi dan u kalendaru da vidiš ili dodaš destinaciju.</p>
       )}
 
       {showForm && (
-        <ActivityForm
-          key={editingActivity?.id ?? `new-${view}-${selectedCalendarDate ?? 'list'}`}
-          destinations={destinations}
+        <DestinationForm
+          key={editingDestination?.id ?? `new-${view}-${selectedCalendarDate ?? 'list'}`}
           planStartDate={plan.startDate}
           planEndDate={plan.endDate}
-          fixedDate={!editingActivity && view === 'calendar' ? selectedCalendarDate : null}
-          defaultDestinationId={!editingActivity ? defaultDestinationId : null}
-          initialValues={editingActivity ? activityToFormValues(editingActivity) : null}
+          fixedArrivalDate={!editingDestination && view === 'calendar' ? selectedCalendarDate : null}
+          initialValues={editingDestination ? destinationToFormValues(editingDestination) : null}
           onSubmit={handleFormSubmit}
-          onCancel={editingActivity ? () => setEditingActivity(null) : undefined}
+          onCancel={editingDestination ? () => setEditingDestination(null) : undefined}
         />
       )}
     </section>

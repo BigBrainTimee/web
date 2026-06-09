@@ -15,6 +15,7 @@ export function createBudgetSummary(data) {
     travelPlanId: data.travelPlanId,
     plannedBudget: data.plannedBudget,
     totalSpent: data.totalSpent,
+    totalEstimated: data.totalEstimated ?? 0,
     remaining: data.remaining,
     byCategory: (data.byCategory ?? []).map((item) => ({
       category: item.category,

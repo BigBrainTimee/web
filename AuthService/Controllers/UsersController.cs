@@ -25,6 +25,31 @@ public class UsersController : ControllerBase
         return Ok(users);
     }
 
+    [HttpPost]
+    public async Task<ActionResult<UserResponseDto>> Create(
+        [FromBody] AdminCreateUserDto request,
+        CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+        {
+            return ValidationProblem(ModelState);
+        }
+
+        try
+        {
+            var user = await _userAuthService.CreateUserAsync(request, cancellationToken);
+            return CreatedAtAction(nameof(GetById), new { id = user.Id }, user);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     [HttpGet("{id:int}")]
     public async Task<ActionResult<UserResponseDto>> GetById(int id, CancellationToken cancellationToken)
     {

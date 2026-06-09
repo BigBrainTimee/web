@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import AdminUserForm from '../components/AdminUserForm';
 import AlertMessage from '../components/AlertMessage';
 import { useAuth } from '../context/AuthContext';
 import { ApiError } from '../services/apiClient';
@@ -39,6 +40,16 @@ export default function AdminUsersPage() {
     }
   }
 
+  async function handleCreate(payload) {
+    try {
+      await adminService.addUser(token, payload);
+      setSuccess('Korisnik je dodat.');
+      await loadUsers();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Dodavanje korisnika nije uspelo.');
+    }
+  }
+
   async function handleDelete(userId, name) {
     if (!window.confirm(`Obrisati korisnika "${name}"? Svi njegovi planovi će biti obrisani.`)) {
       return;
@@ -69,11 +80,12 @@ export default function AdminUsersPage() {
       <AlertMessage message={error} onClose={() => setError('')} />
       <AlertMessage type="success" message={success} onClose={() => setSuccess('')} />
 
+      <AdminUserForm onSubmit={handleCreate} />
+
       <div className="card admin-table-wrap">
         <table className="admin-table">
           <thead>
             <tr>
-              <th>ID</th>
               <th>Ime</th>
               <th>Email</th>
               <th>Uloga</th>
@@ -87,7 +99,6 @@ export default function AdminUsersPage() {
 
               return (
                 <tr key={user.id}>
-                  <td>{user.id}</td>
                   <td>{user.name}</td>
                   <td>{user.email}</td>
                   <td>
