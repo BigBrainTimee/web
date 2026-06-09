@@ -31,6 +31,12 @@ public class TravelPlanService : ITravelPlanService
         return plan is null ? null : TravelPlanMapper.ToResponseDto(plan);
     }
 
+    public async Task<TravelPlanReportDto?> GetPlanReportAsync(int userId, int planId, CancellationToken cancellationToken = default)
+    {
+        var plan = await GetOwnedPlanAsync(userId, planId, asNoTracking: true, cancellationToken);
+        return plan is null ? null : await BuildPlanReportAsync(plan, cancellationToken);
+    }
+
     public async Task<TravelPlanResponseDto> CreateAsync(int userId, CreateTravelPlanDto dto, CancellationToken cancellationToken = default)
     {
         ValidateTravelPlanDates(dto.StartDate, dto.EndDate);
@@ -347,64 +353,18 @@ public class TravelPlanService : ITravelPlanService
         }
 
         var (link, plan) = context.Value;
-        var planId = plan.Id;
-
-        var destinations = await _dbContext.Destinations
-            .AsNoTracking()
-            .Where(d => d.TravelPlanId == planId)
-            .OrderBy(d => d.ArrivalDate)
-            .ToListAsync(cancellationToken);
-
-        var activities = await _dbContext.Activities
-            .AsNoTracking()
-            .Where(a => a.TravelPlanId == planId)
-            .OrderBy(a => a.ActivityDate)
-            .ThenBy(a => a.ActivityTime)
-            .ToListAsync(cancellationToken);
-
-        var checklistItems = await _dbContext.ChecklistItems
-            .AsNoTracking()
-            .Where(c => c.TravelPlanId == planId)
-            .OrderBy(c => c.SortOrder)
-            .ThenBy(c => c.Id)
-            .ToListAsync(cancellationToken);
-
-        var expenses = await _dbContext.Expenses
-            .AsNoTracking()
-            .Where(e => e.TravelPlanId == planId)
-            .OrderByDescending(e => e.ExpenseDate)
-            .ThenBy(e => e.Id)
-            .ToListAsync(cancellationToken);
-
-        var byCategory = expenses
-            .GroupBy(e => e.Category)
-            .Select(g => new CategorySummaryDto
-            {
-                Category = g.Key,
-                Amount = g.Sum(e => e.Amount)
-            })
-            .OrderBy(c => c.Category)
-            .ToList();
-
-        var totalSpent = byCategory.Sum(c => c.Amount);
+        var report = await BuildPlanReportAsync(plan, cancellationToken);
 
         return new SharedPlanResponseDto
         {
             AccessType = link.AccessType,
             CanEdit = link.AccessType.Equals("Edit", StringComparison.OrdinalIgnoreCase),
-            Plan = TravelPlanMapper.ToResponseDto(plan),
-            Destinations = destinations.Select(DestinationMapper.ToResponseDto).ToList(),
-            Activities = activities.Select(ActivityMapper.ToResponseDto).ToList(),
-            ChecklistItems = checklistItems.Select(ChecklistItemMapper.ToResponseDto).ToList(),
-            Expenses = expenses.Select(ExpenseMapper.ToResponseDto).ToList(),
-            BudgetSummary = new BudgetSummaryDto
-            {
-                TravelPlanId = planId,
-                PlannedBudget = plan.PlannedBudget,
-                TotalSpent = totalSpent,
-                Remaining = plan.PlannedBudget - totalSpent,
-                ByCategory = byCategory
-            }
+            Plan = report.Plan,
+            Destinations = report.Destinations,
+            Activities = report.Activities,
+            ChecklistItems = report.ChecklistItems,
+            Expenses = report.Expenses,
+            BudgetSummary = report.BudgetSummary
         };
     }
 
@@ -684,6 +644,69 @@ public class TravelPlanService : ITravelPlanService
         }
 
         return (link, link.TravelPlan);
+    }
+
+    private async Task<TravelPlanReportDto> BuildPlanReportAsync(
+        Models.TravelPlan plan,
+        CancellationToken cancellationToken)
+    {
+        var planId = plan.Id;
+
+        var destinations = await _dbContext.Destinations
+            .AsNoTracking()
+            .Where(d => d.TravelPlanId == planId)
+            .OrderBy(d => d.ArrivalDate)
+            .ToListAsync(cancellationToken);
+
+        var activities = await _dbContext.Activities
+            .AsNoTracking()
+            .Where(a => a.TravelPlanId == planId)
+            .OrderBy(a => a.ActivityDate)
+            .ThenBy(a => a.ActivityTime)
+            .ToListAsync(cancellationToken);
+
+        var checklistItems = await _dbContext.ChecklistItems
+            .AsNoTracking()
+            .Where(c => c.TravelPlanId == planId)
+            .OrderBy(c => c.SortOrder)
+            .ThenBy(c => c.Id)
+            .ToListAsync(cancellationToken);
+
+        var expenses = await _dbContext.Expenses
+            .AsNoTracking()
+            .Where(e => e.TravelPlanId == planId)
+            .OrderByDescending(e => e.ExpenseDate)
+            .ThenBy(e => e.Id)
+            .ToListAsync(cancellationToken);
+
+        var byCategory = expenses
+            .GroupBy(e => e.Category)
+            .Select(g => new CategorySummaryDto
+            {
+                Category = g.Key,
+                Amount = g.Sum(e => e.Amount)
+            })
+            .OrderBy(c => c.Category)
+            .ToList();
+
+        var totalSpent = byCategory.Sum(c => c.Amount);
+
+        return new TravelPlanReportDto
+        {
+            Plan = TravelPlanMapper.ToResponseDto(plan),
+            Destinations = destinations.Select(DestinationMapper.ToResponseDto).ToList(),
+            Activities = activities.Select(ActivityMapper.ToResponseDto).ToList(),
+            ChecklistItems = checklistItems.Select(ChecklistItemMapper.ToResponseDto).ToList(),
+            Expenses = expenses.Select(ExpenseMapper.ToResponseDto).ToList(),
+            BudgetSummary = new BudgetSummaryDto
+            {
+                TravelPlanId = planId,
+                PlannedBudget = plan.PlannedBudget,
+                TotalSpent = totalSpent,
+                Remaining = plan.PlannedBudget - totalSpent,
+                ByCategory = byCategory
+            }
+        };
     }
 
     private async Task<Models.TravelPlan?> GetOwnedPlanAsync(

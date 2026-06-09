@@ -12,10 +12,14 @@ namespace TravelService.Controllers;
 public class TravelPlansController : ControllerBase
 {
     private readonly ITravelPlanService _travelPlanService;
+    private readonly IPlanReportPdfGenerator _planReportPdfGenerator;
 
-    public TravelPlansController(ITravelPlanService travelPlanService)
+    public TravelPlansController(
+        ITravelPlanService travelPlanService,
+        IPlanReportPdfGenerator planReportPdfGenerator)
     {
         _travelPlanService = travelPlanService;
+        _planReportPdfGenerator = planReportPdfGenerator;
     }
 
     [HttpGet]
@@ -42,6 +46,26 @@ public class TravelPlansController : ControllerBase
 
         var plan = await _travelPlanService.GetByIdAsync(userId.Value, id, cancellationToken);
         return plan is null ? NotFound(new { message = "Travel plan not found." }) : Ok(plan);
+    }
+
+    [HttpGet("{id:int}/report/pdf")]
+    public async Task<IActionResult> DownloadReport(int id, CancellationToken cancellationToken)
+    {
+        var userId = GetUserId();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        var report = await _travelPlanService.GetPlanReportAsync(userId.Value, id, cancellationToken);
+        if (report is null)
+        {
+            return NotFound(new { message = "Travel plan not found." });
+        }
+
+        var pdfBytes = _planReportPdfGenerator.Generate(report);
+        var fileName = $"plan-{id}-izvjestaj.pdf";
+        return File(pdfBytes, "application/pdf", fileName);
     }
 
     [HttpPost]

@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import AlertMessage from '../components/AlertMessage';
-import ActivityForm from '../components/ActivityForm';
-import ActivityList from '../components/ActivityList';
+import ActivitySection from '../components/ActivitySection';
 import BudgetSummary from '../components/BudgetSummary';
 import ChecklistForm from '../components/ChecklistForm';
 import ChecklistList from '../components/ChecklistList';
@@ -32,6 +31,7 @@ export default function TravelPlanDetailPage() {
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   async function loadData() {
     setLoading(true);
@@ -71,6 +71,20 @@ export default function TravelPlanDetailPage() {
       setSuccess('Plan je ažuriran.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Ažuriranje nije uspelo.');
+    }
+  }
+
+  async function handleDownloadReport() {
+    setDownloadingPdf(true);
+    setError('');
+
+    try {
+      await travelPlanService.downloadPlanReport(token, id);
+      setSuccess('PDF izvještaj je preuzet.');
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Preuzimanje PDF-a nije uspelo.');
+    } finally {
+      setDownloadingPdf(false);
     }
   }
 
@@ -204,6 +218,14 @@ export default function TravelPlanDetailPage() {
           <p className="muted">{plan.startDate} → {plan.endDate}</p>
         </div>
         <div className="header-actions">
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={handleDownloadReport}
+            disabled={downloadingPdf}
+          >
+            {downloadingPdf ? 'Generisanje PDF-a...' : 'Preuzmi PDF'}
+          </button>
           <button type="button" className="btn btn-secondary" onClick={() => setEditing((prev) => !prev)}>
             {editing ? 'Otkaži izmenu' : 'Izmeni plan'}
           </button>
@@ -251,11 +273,13 @@ export default function TravelPlanDetailPage() {
         <DestinationForm onSubmit={handleAddDestination} />
       </section>
 
-      <section className="section-block">
-        <h2>Aktivnosti po danima</h2>
-        <ActivityList activities={activities} onDelete={handleDeleteActivity} />
-        <ActivityForm destinations={destinations} onSubmit={handleAddActivity} />
-      </section>
+      <ActivitySection
+        activities={activities}
+        destinations={destinations}
+        plan={plan}
+        onDelete={handleDeleteActivity}
+        onSubmit={handleAddActivity}
+      />
 
       <section className="section-block">
         <h2>Deljenje plana</h2>

@@ -2,7 +2,7 @@ import { createDestination as mapDestination } from '../models/Destination';
 import { createTravelPlan as mapTravelPlan } from '../models/TravelPlan';
 import { createActivity as mapActivity } from '../models/Activity';
 import { createChecklistItem as mapChecklistItem } from '../models/ChecklistItem';
-import { apiRequest } from './apiClient';
+import { apiDownload, apiRequest } from './apiClient';
 
 const BASE = '/api/travel/travel-plans';
 
@@ -39,6 +39,16 @@ export async function deleteTravelPlan(token, id) {
     method: 'DELETE',
     token,
   });
+}
+
+export async function downloadPlanReport(token, planId) {
+  const { blob, fileName } = await apiDownload(`${BASE}/${planId}/report/pdf`, { token });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 export async function getDestinations(token, planId) {

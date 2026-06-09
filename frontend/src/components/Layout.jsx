@@ -19,6 +19,7 @@ export default function Layout({ children }) {
         {isAuthenticated && (
           <nav className="nav-links">
             <Link to="/plans">Planovi</Link>
+            {user?.role === 'Admin' && <Link to="/admin/users">Admin</Link>}
             <span className="user-badge">{user?.name}</span>
             <button type="button" className="btn btn-secondary" onClick={handleLogout}>
               Odjava

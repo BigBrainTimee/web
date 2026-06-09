@@ -1,7 +1,9 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
+import AdminRoute from './components/AdminRoute';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
+import AdminUsersPage from './pages/AdminUsersPage';
 import CreateTravelPlanPage from './pages/CreateTravelPlanPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -34,6 +36,14 @@ export default function App() {
             )}
           />
           <Route path="/shared/:token" element={<SharedPlanPage />} />
+          <Route
+            path="/admin/users"
+            element={(
+              <AdminRoute>
+                <AdminUsersPage />
+              </AdminRoute>
+            )}
+          />
           <Route
             path="/plans/:id"
             element={(

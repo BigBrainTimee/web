@@ -64,7 +64,16 @@ internal sealed class GatewayService : StatelessService
                     {
                         options.AddPolicy("Frontend", policy =>
                         {
-                            policy.WithOrigins("http://localhost:5173", "http://127.0.0.1:5173")
+                            policy.SetIsOriginAllowed(origin =>
+                            {
+                                if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+                                {
+                                    return false;
+                                }
+
+                                return (uri.Host is "localhost" or "127.0.0.1")
+                                    && uri.Port is >= 5173 and <= 5200;
+                            })
                                 .AllowAnyHeader()
                                 .AllowAnyMethod();
                         });

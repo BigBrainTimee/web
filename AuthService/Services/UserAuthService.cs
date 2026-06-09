@@ -61,6 +61,72 @@ public class UserAuthService : IUserAuthService
         return user is null ? null : UserMapper.ToResponseDto(user);
     }
 
+    public async Task<IReadOnlyList<UserResponseDto>> GetAllUsersAsync(CancellationToken cancellationToken = default)
+    {
+        var users = await _dbContext.Users
+            .AsNoTracking()
+            .OrderByDescending(u => u.CreatedAt)
+            .ToListAsync(cancellationToken);
+
+        return users.Select(UserMapper.ToResponseDto).ToList();
+    }
+
+    public async Task<UserResponseDto?> GetUserByIdAsync(int userId, CancellationToken cancellationToken = default)
+    {
+        var user = await _dbContext.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+
+        return user is null ? null : UserMapper.ToResponseDto(user);
+    }
+
+    public async Task<UserResponseDto?> UpdateUserRoleAsync(
+        int adminUserId,
+        int targetUserId,
+        UpdateUserRoleDto dto,
+        CancellationToken cancellationToken = default)
+    {
+        if (adminUserId == targetUserId)
+        {
+            throw new InvalidOperationException("You cannot change your own role.");
+        }
+
+        var role = UserMapper.NormalizeRole(dto.Role);
+
+        var user = await _dbContext.Users
+            .FirstOrDefaultAsync(u => u.Id == targetUserId, cancellationToken);
+
+        if (user is null)
+        {
+            return null;
+        }
+
+        user.Role = role;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return UserMapper.ToResponseDto(user);
+    }
+
+    public async Task<bool> DeleteUserAsync(int adminUserId, int targetUserId, CancellationToken cancellationToken = default)
+    {
+        if (adminUserId == targetUserId)
+        {
+            throw new InvalidOperationException("You cannot delete your own account.");
+        }
+
+        var user = await _dbContext.Users
+            .FirstOrDefaultAsync(u => u.Id == targetUserId, cancellationToken);
+
+        if (user is null)
+        {
+            return false;
+        }
+
+        _dbContext.Users.Remove(user);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
     private AuthResponseDto BuildAuthResponse(Models.User user)
     {
         var (token, expiresAt) = _jwtTokenService.GenerateToken(user);

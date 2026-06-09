@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 const STATUS_OPTIONS = ['Planned', 'Reserved', 'Completed', 'Cancelled'];
 
@@ -13,9 +13,17 @@ const emptyForm = {
   destinationId: '',
 };
 
-export default function ActivityForm({ destinations, onSubmit }) {
-  const [form, setForm] = useState(emptyForm);
+export default function ActivityForm({ destinations, onSubmit, fixedDate = null }) {
+  const [form, setForm] = useState(() => (
+    fixedDate ? { ...emptyForm, activityDate: fixedDate } : emptyForm
+  ));
   const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    if (fixedDate) {
+      setForm((prev) => ({ ...prev, activityDate: fixedDate }));
+    }
+  }, [fixedDate]);
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -49,12 +57,18 @@ export default function ActivityForm({ destinations, onSubmit }) {
       destinationId: form.destinationId ? Number(form.destinationId) : null,
     });
 
-    setForm(emptyForm);
+    setForm(fixedDate ? { ...emptyForm, activityDate: fixedDate } : emptyForm);
   }
 
   return (
     <form className="card form-card nested-form" onSubmit={handleSubmit}>
       <h3>Dodaj aktivnost</h3>
+
+      {fixedDate && (
+        <p className="fixed-date-label">
+          <strong>Datum:</strong> {fixedDate}
+        </p>
+      )}
 
       <label>
         Naziv
@@ -63,11 +77,13 @@ export default function ActivityForm({ destinations, onSubmit }) {
       </label>
 
       <div className="form-row">
-        <label>
-          Datum
-          <input type="date" name="activityDate" value={form.activityDate} onChange={handleChange} />
-          {errors.activityDate && <span className="field-error">{errors.activityDate}</span>}
-        </label>
+        {!fixedDate && (
+          <label>
+            Datum
+            <input type="date" name="activityDate" value={form.activityDate} onChange={handleChange} />
+            {errors.activityDate && <span className="field-error">{errors.activityDate}</span>}
+          </label>
+        )}
         <label>
           Vreme
           <input type="time" name="activityTime" value={form.activityTime} onChange={handleChange} />

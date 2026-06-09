@@ -2,10 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { useParams } from 'react-router-dom';
 
-import ActivityForm from '../components/ActivityForm';
-
-import ActivityList from '../components/ActivityList';
-
+import ActivitySection from '../components/ActivitySection';
 import AlertMessage from '../components/AlertMessage';
 
 import BudgetSummary from '../components/BudgetSummary';
@@ -260,45 +257,20 @@ export default function SharedPlanPage() {
 
 
 
-      <section className="section-block">
-
-        <h2>Aktivnosti po danima</h2>
-
-        <ActivityList
-
-          activities={activities}
-
-          onDelete={canEdit ? (id) => {
-
-            if (!window.confirm('Obrisati aktivnost?')) return;
-
-            runAction(() => shareService.deleteSharedActivity(token, id), 'Aktivnost je obrisana.');
-
-          } : undefined}
-
-          readOnly={!canEdit}
-
-        />
-
-        {canEdit && (
-
-          <ActivityForm
-
-            destinations={destinations}
-
-            onSubmit={(payload) => runAction(
-
-              () => shareService.addSharedActivity(token, payload),
-
-              'Aktivnost je dodata.',
-
-            )}
-
-          />
-
-        )}
-
-      </section>
+      <ActivitySection
+        activities={activities}
+        destinations={destinations}
+        plan={plan}
+        readOnly={!canEdit}
+        onDelete={canEdit ? (activityId) => {
+          if (!window.confirm('Obrisati aktivnost?')) return;
+          runAction(() => shareService.deleteSharedActivity(token, activityId), 'Aktivnost je obrisana.');
+        } : undefined}
+        onSubmit={canEdit ? (payload) => runAction(
+          () => shareService.addSharedActivity(token, payload),
+          'Aktivnost je dodata.',
+        ) : undefined}
+      />
 
 
 

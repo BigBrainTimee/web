@@ -43,6 +43,7 @@ internal sealed class TravelServiceHost : StatefulService
                     builder.Services.AddDbContext<TravelDbContext>(options =>
                         options.UseSqlServer(builder.Configuration.GetConnectionString("TravelPlannerDb")));
                     builder.Services.AddScoped<ITravelPlanService, TravelPlanService>();
+                    builder.Services.AddSingleton<IPlanReportPdfGenerator, PlanReportPdfGenerator>();
 
                     var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()
                         ?? throw new InvalidOperationException("JWT settings are missing.");

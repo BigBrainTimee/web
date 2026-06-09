@@ -56,3 +56,30 @@ export async function apiRequest(path, options = {}) {
 
   return response.json();
 }
+
+export async function apiDownload(path, options = {}) {
+  const { token, method = 'GET', headers = {} } = options;
+
+  const requestHeaders = { ...headers };
+
+  if (token) {
+    requestHeaders.Authorization = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_URL}${path}`, {
+    method,
+    headers: requestHeaders,
+  });
+
+  if (!response.ok) {
+    const message = await parseError(response);
+    throw new ApiError(message, response.status);
+  }
+
+  const blob = await response.blob();
+  const disposition = response.headers.get('Content-Disposition') ?? '';
+  const fileNameMatch = disposition.match(/filename="?([^";]+)"?/i);
+  const fileName = fileNameMatch?.[1] ?? 'download.pdf';
+
+  return { blob, fileName };
+}

@@ -28,4 +28,15 @@ public static class UserMapper
             CreatedAt = DateTime.UtcNow
         };
     }
+
+    public static string NormalizeRole(string role)
+    {
+        if (!role.Equals("User", StringComparison.OrdinalIgnoreCase)
+            && !role.Equals("Admin", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException("Invalid role. Use User or Admin.");
+        }
+
+        return role.Equals("Admin", StringComparison.OrdinalIgnoreCase) ? "Admin" : "User";
+    }
 }
