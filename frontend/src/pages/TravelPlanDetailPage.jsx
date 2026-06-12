@@ -273,6 +273,7 @@ export default function TravelPlanDetailPage() {
             <ExpensesSection
               expenses={expenses}
               activities={activities}
+              plan={plan}
               onAddExpense={handleAddExpense}
               onDeleteExpense={handleDeleteExpense}
             />

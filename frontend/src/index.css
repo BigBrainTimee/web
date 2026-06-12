@@ -481,7 +481,8 @@ textarea {
 }
 
 .month-calendar-cell.has-activities .month-calendar-day-num,
-.month-calendar-cell.has-destinations .month-calendar-day-num {
+.month-calendar-cell.has-destinations .month-calendar-day-num,
+.month-calendar-cell.has-expenses .month-calendar-day-num {
   font-weight: 600;
 }
 

@@ -1,28 +1,23 @@
 import EstimatedExpenseList from './EstimatedExpenseList';
-import ExpenseForm from './ExpenseForm';
-import ExpenseList from './ExpenseList';
+import ExpenseSection from './ExpenseSection';
 
 export default function ExpensesSection({
   expenses,
   activities,
+  plan,
   onAddExpense,
   onDeleteExpense,
   readOnly = false,
 }) {
   return (
     <div className="expenses-split">
-      <section className="expenses-column">
-        <h3>Sigurni troškovi</h3>
-        <p className="muted expenses-column-hint">Stvarno uneti troškovi koji se računaju u budžet.</p>
-        <ExpenseList
-          expenses={expenses}
-          onDelete={readOnly ? undefined : onDeleteExpense}
-          readOnly={readOnly}
-        />
-        {!readOnly && onAddExpense && (
-          <ExpenseForm onSubmit={onAddExpense} />
-        )}
-      </section>
+      <ExpenseSection
+        expenses={expenses}
+        plan={plan}
+        onDelete={readOnly ? undefined : onDeleteExpense}
+        onSubmit={readOnly ? undefined : onAddExpense}
+        readOnly={readOnly}
+      />
 
       <section className="expenses-column">
         <h3>Procenjeni troškovi</h3>

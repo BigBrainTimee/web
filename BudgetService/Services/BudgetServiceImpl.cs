@@ -33,10 +33,13 @@ public class BudgetServiceImpl : IBudgetService
 
     public async Task<ExpenseResponseDto?> AddExpenseAsync(int userId, int planId, CreateExpenseDto dto, CancellationToken cancellationToken = default)
     {
-        if (!await PlanExistsForUserAsync(userId, planId, cancellationToken))
+        var plan = await GetOwnedPlanAsync(userId, planId, cancellationToken);
+        if (plan is null)
         {
             return null;
         }
+
+        ValidateExpenseDate(dto.ExpenseDate, plan.StartDate, plan.EndDate);
 
         var expense = ExpenseMapper.ToEntity(dto, planId);
         _dbContext.Expenses.Add(expense);
@@ -52,6 +55,8 @@ public class BudgetServiceImpl : IBudgetService
         {
             return null;
         }
+
+        ValidateExpenseDate(dto.ExpenseDate, expense.TravelPlan!.StartDate, expense.TravelPlan.EndDate);
 
         ExpenseMapper.ApplyUpdate(expense, dto);
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -123,6 +128,17 @@ public class BudgetServiceImpl : IBudgetService
             return null;
         }
 
+        var plan = await _dbContext.TravelPlans
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == context.Value, cancellationToken);
+
+        if (plan is null)
+        {
+            return null;
+        }
+
+        ValidateExpenseDate(dto.ExpenseDate, plan.StartDate, plan.EndDate);
+
         var expense = ExpenseMapper.ToEntity(dto, context.Value);
         _dbContext.Expenses.Add(expense);
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -143,12 +159,15 @@ public class BudgetServiceImpl : IBudgetService
         }
 
         var expense = await _dbContext.Expenses
+            .Include(e => e.TravelPlan)
             .FirstOrDefaultAsync(e => e.Id == expenseId && e.TravelPlanId == context.Value, cancellationToken);
 
         if (expense is null)
         {
             return null;
         }
+
+        ValidateExpenseDate(dto.ExpenseDate, expense.TravelPlan!.StartDate, expense.TravelPlan.EndDate);
 
         ExpenseMapper.ApplyUpdate(expense, dto);
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -261,9 +280,23 @@ public class BudgetServiceImpl : IBudgetService
 
     private async Task<bool> PlanExistsForUserAsync(int userId, int planId, CancellationToken cancellationToken)
     {
+        return await GetOwnedPlanAsync(userId, planId, cancellationToken) is not null;
+    }
+
+    private async Task<Models.TravelPlan?> GetOwnedPlanAsync(int userId, int planId, CancellationToken cancellationToken)
+    {
         return await _dbContext.TravelPlans
             .AsNoTracking()
-            .AnyAsync(p => p.Id == planId && p.UserId == userId, cancellationToken);
+            .FirstOrDefaultAsync(p => p.Id == planId && p.UserId == userId, cancellationToken);
+    }
+
+    private static void ValidateExpenseDate(DateOnly expenseDate, DateOnly startDate, DateOnly endDate)
+    {
+        if (expenseDate < startDate || expenseDate > endDate)
+        {
+            throw new ArgumentException(
+                $"Datum troška mora biti u periodu putovanja ({startDate:yyyy-MM-dd} – {endDate:yyyy-MM-dd}).");
+        }
     }
 
     private async Task<Models.Expense?> GetOwnedExpenseAsync(

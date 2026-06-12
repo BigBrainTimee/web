@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { EXPENSE_CATEGORIES, getExpenseCategoryLabel } from '../models/Expense';
 
 const emptyForm = {
@@ -9,9 +9,23 @@ const emptyForm = {
   description: '',
 };
 
-export default function ExpenseForm({ onSubmit }) {
-  const [form, setForm] = useState(emptyForm);
+function buildEmptyForm(fixedDate) {
+  return fixedDate ? { ...emptyForm, expenseDate: fixedDate } : { ...emptyForm };
+}
+
+export default function ExpenseForm({
+  onSubmit,
+  fixedDate = null,
+  planStartDate = null,
+  planEndDate = null,
+}) {
+  const [form, setForm] = useState(() => buildEmptyForm(fixedDate));
   const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    setForm(buildEmptyForm(fixedDate));
+    setErrors({});
+  }, [fixedDate]);
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -23,6 +37,12 @@ export default function ExpenseForm({ onSubmit }) {
     const nextErrors = {};
     if (!form.name.trim()) nextErrors.name = 'Naziv je obavezan.';
     if (!form.expenseDate) nextErrors.expenseDate = 'Datum je obavezan.';
+    if (planStartDate && form.expenseDate && form.expenseDate < planStartDate) {
+      nextErrors.expenseDate = `Datum mora biti u periodu putovanja (${planStartDate} – ${planEndDate}).`;
+    }
+    if (planEndDate && form.expenseDate && form.expenseDate > planEndDate) {
+      nextErrors.expenseDate = `Datum mora biti u periodu putovanja (${planStartDate} – ${planEndDate}).`;
+    }
     if (form.amount === '' || Number(form.amount) < 0) {
       nextErrors.amount = 'Iznos mora biti 0 ili veći.';
     }
@@ -42,7 +62,7 @@ export default function ExpenseForm({ onSubmit }) {
       description: form.description.trim() || null,
     });
 
-    setForm(emptyForm);
+    setForm(buildEmptyForm(fixedDate));
   }
 
   return (
@@ -73,7 +93,15 @@ export default function ExpenseForm({ onSubmit }) {
 
       <label>
         Datum
-        <input type="date" name="expenseDate" value={form.expenseDate} onChange={handleChange} />
+        <input
+          type="date"
+          name="expenseDate"
+          value={form.expenseDate}
+          onChange={handleChange}
+          min={planStartDate ?? undefined}
+          max={planEndDate ?? undefined}
+          readOnly={Boolean(fixedDate)}
+        />
         {errors.expenseDate && <span className="field-error">{errors.expenseDate}</span>}
       </label>
 

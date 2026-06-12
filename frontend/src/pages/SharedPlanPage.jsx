@@ -121,6 +121,7 @@ export default function SharedPlanPage() {
             <ExpensesSection
               expenses={expenses}
               activities={activities}
+              plan={plan}
               readOnly={!canEdit}
               onDeleteExpense={canEdit ? (id) => {
                 if (!window.confirm('Obrisati trošak?')) return;
