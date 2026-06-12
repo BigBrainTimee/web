@@ -32,6 +32,7 @@ public interface ITravelPlanService
     Task<bool> DeleteShareLinkAsync(int userId, int planId, int linkId, CancellationToken cancellationToken = default);
 
     Task<SharedPlanResponseDto?> GetSharedPlanAsync(string token, CancellationToken cancellationToken = default);
+    Task<SharedPlanContextDto?> GetSharedPlanContextAsync(string token, CancellationToken cancellationToken = default);
     Task<ChecklistItemResponseDto?> ToggleSharedChecklistItemAsync(string token, int itemId, CancellationToken cancellationToken = default);
     Task<ChecklistItemResponseDto?> AddSharedChecklistItemAsync(string token, CreateChecklistItemDto dto, CancellationToken cancellationToken = default);
     Task<bool> DeleteSharedChecklistItemAsync(string token, int itemId, CancellationToken cancellationToken = default);
@@ -43,7 +44,4 @@ public interface ITravelPlanService
     Task<ActivityResponseDto?> AddSharedActivityAsync(string token, CreateActivityDto dto, CancellationToken cancellationToken = default);
     Task<ActivityResponseDto?> UpdateSharedActivityAsync(string token, int activityId, UpdateActivityDto dto, CancellationToken cancellationToken = default);
     Task<bool> DeleteSharedActivityAsync(string token, int activityId, CancellationToken cancellationToken = default);
-
-    Task<ExpenseResponseDto?> AddSharedExpenseAsync(string token, CreateExpenseDto dto, CancellationToken cancellationToken = default);
-    Task<bool> DeleteSharedExpenseAsync(string token, int expenseId, CancellationToken cancellationToken = default);
 }

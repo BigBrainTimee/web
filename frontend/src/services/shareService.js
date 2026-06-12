@@ -8,6 +8,7 @@ import { apiRequest } from './apiClient';
 
 const PLAN_BASE = '/api/travel/travel-plans';
 const SHARED_BASE = '/api/travel/shared';
+const SHARED_BUDGET_BASE = '/api/budget/shared';
 
 export async function getShareLinks(token, planId) {
   const data = await apiRequest(`${PLAN_BASE}/${planId}/share-links`, { token });
@@ -86,7 +87,7 @@ export async function updateSharedActivity(shareToken, activityId, payload, auth
 }
 
 export async function addSharedExpense(shareToken, payload, authToken) {
-  const data = await apiRequest(`${SHARED_BASE}/${shareToken}/expenses`, {
+  const data = await apiRequest(`${SHARED_BUDGET_BASE}/${shareToken}/expenses`, {
     method: 'POST',
     token: authToken,
     body: payload,
@@ -95,7 +96,7 @@ export async function addSharedExpense(shareToken, payload, authToken) {
 }
 
 export async function deleteSharedExpense(shareToken, expenseId, authToken) {
-  return apiRequest(`${SHARED_BASE}/${shareToken}/expenses/${expenseId}`, {
+  return apiRequest(`${SHARED_BUDGET_BASE}/${shareToken}/expenses/${expenseId}`, {
     method: 'DELETE',
     token: authToken,
   });

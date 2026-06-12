@@ -1,3 +1,4 @@
+using BudgetService.Clients;
 using BudgetService.Data;
 using BudgetService.Dtos;
 using BudgetService.Mappers;
@@ -8,10 +9,12 @@ namespace BudgetService.Services;
 public class BudgetServiceImpl : IBudgetService
 {
     private readonly BudgetDbContext _dbContext;
+    private readonly ITravelClient _travelClient;
 
-    public BudgetServiceImpl(BudgetDbContext dbContext)
+    public BudgetServiceImpl(BudgetDbContext dbContext, ITravelClient travelClient)
     {
         _dbContext = dbContext;
+        _travelClient = travelClient;
     }
 
     public async Task<IReadOnlyList<ExpenseResponseDto>> GetExpensesAsync(int userId, int planId, CancellationToken cancellationToken = default)
@@ -21,6 +24,11 @@ public class BudgetServiceImpl : IBudgetService
             return Array.Empty<ExpenseResponseDto>();
         }
 
+        return await GetExpensesByPlanIdAsync(planId, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<ExpenseResponseDto>> GetExpensesByPlanIdAsync(int planId, CancellationToken cancellationToken = default)
+    {
         var expenses = await _dbContext.Expenses
             .AsNoTracking()
             .Where(e => e.TravelPlanId == planId)
@@ -33,8 +41,8 @@ public class BudgetServiceImpl : IBudgetService
 
     public async Task<ExpenseResponseDto?> AddExpenseAsync(int userId, int planId, CreateExpenseDto dto, CancellationToken cancellationToken = default)
     {
-        var plan = await GetOwnedPlanAsync(userId, planId, cancellationToken);
-        if (plan is null)
+        var plan = await _travelClient.GetOwnedPlanAsync(planId, cancellationToken);
+        if (plan is null || plan.UserId != userId)
         {
             return null;
         }
@@ -50,13 +58,21 @@ public class BudgetServiceImpl : IBudgetService
 
     public async Task<ExpenseResponseDto?> UpdateExpenseAsync(int userId, int planId, int expenseId, UpdateExpenseDto dto, CancellationToken cancellationToken = default)
     {
-        var expense = await GetOwnedExpenseAsync(userId, planId, expenseId, cancellationToken);
+        var plan = await _travelClient.GetOwnedPlanAsync(planId, cancellationToken);
+        if (plan is null || plan.UserId != userId)
+        {
+            return null;
+        }
+
+        var expense = await _dbContext.Expenses
+            .FirstOrDefaultAsync(e => e.Id == expenseId && e.TravelPlanId == planId, cancellationToken);
+
         if (expense is null)
         {
             return null;
         }
 
-        ValidateExpenseDate(dto.ExpenseDate, expense.TravelPlan!.StartDate, expense.TravelPlan.EndDate);
+        ValidateExpenseDate(dto.ExpenseDate, plan.StartDate, plan.EndDate);
 
         ExpenseMapper.ApplyUpdate(expense, dto);
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -66,7 +82,15 @@ public class BudgetServiceImpl : IBudgetService
 
     public async Task<bool> DeleteExpenseAsync(int userId, int planId, int expenseId, CancellationToken cancellationToken = default)
     {
-        var expense = await GetOwnedExpenseAsync(userId, planId, expenseId, cancellationToken);
+        var plan = await _travelClient.GetOwnedPlanAsync(planId, cancellationToken);
+        if (plan is null || plan.UserId != userId)
+        {
+            return false;
+        }
+
+        var expense = await _dbContext.Expenses
+            .FirstOrDefaultAsync(e => e.Id == expenseId && e.TravelPlanId == planId, cancellationToken);
+
         if (expense is null)
         {
             return false;
@@ -79,40 +103,37 @@ public class BudgetServiceImpl : IBudgetService
 
     public async Task<BudgetSummaryDto?> GetSummaryAsync(int userId, int planId, CancellationToken cancellationToken = default)
     {
-        var plan = await _dbContext.TravelPlans
-            .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.Id == planId && p.UserId == userId, cancellationToken);
+        var plan = await _travelClient.GetOwnedPlanAsync(planId, cancellationToken);
+        if (plan is null || plan.UserId != userId)
+        {
+            return null;
+        }
 
+        return await BuildSummaryAsync(plan, cancellationToken);
+    }
+
+    public async Task<BudgetSummaryDto?> GetSharedSummaryAsync(string token, CancellationToken cancellationToken = default)
+    {
+        var plan = await _travelClient.GetSharedPlanContextAsync(token, requireEdit: false, cancellationToken);
         if (plan is null)
         {
             return null;
         }
 
-        return await BuildSummaryAsync(planId, cancellationToken);
-    }
-
-    public async Task<BudgetSummaryDto?> GetSharedSummaryAsync(string token, CancellationToken cancellationToken = default)
-    {
-        var context = await GetValidShareContextAsync(token, cancellationToken);
-        if (context is null)
-        {
-            return null;
-        }
-
-        return await BuildSummaryAsync(context.Value, cancellationToken);
+        return await BuildSummaryAsync(plan, cancellationToken);
     }
 
     public async Task<IReadOnlyList<ExpenseResponseDto>?> GetSharedExpensesAsync(string token, CancellationToken cancellationToken = default)
     {
-        var context = await GetValidShareContextAsync(token, cancellationToken);
-        if (context is null)
+        var plan = await _travelClient.GetSharedPlanContextAsync(token, requireEdit: false, cancellationToken);
+        if (plan is null)
         {
             return null;
         }
 
         var expenses = await _dbContext.Expenses
             .AsNoTracking()
-            .Where(e => e.TravelPlanId == context.Value)
+            .Where(e => e.TravelPlanId == plan.TravelPlanId)
             .OrderByDescending(e => e.ExpenseDate)
             .ThenBy(e => e.Id)
             .ToListAsync(cancellationToken);
@@ -122,16 +143,7 @@ public class BudgetServiceImpl : IBudgetService
 
     public async Task<ExpenseResponseDto?> AddSharedExpenseAsync(string token, CreateExpenseDto dto, CancellationToken cancellationToken = default)
     {
-        var context = await GetValidShareContextAsync(token, cancellationToken, requireEdit: true);
-        if (context is null)
-        {
-            return null;
-        }
-
-        var plan = await _dbContext.TravelPlans
-            .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.Id == context.Value, cancellationToken);
-
+        var plan = await _travelClient.GetSharedPlanContextAsync(token, requireEdit: true, cancellationToken);
         if (plan is null)
         {
             return null;
@@ -139,7 +151,7 @@ public class BudgetServiceImpl : IBudgetService
 
         ValidateExpenseDate(dto.ExpenseDate, plan.StartDate, plan.EndDate);
 
-        var expense = ExpenseMapper.ToEntity(dto, context.Value);
+        var expense = ExpenseMapper.ToEntity(dto, plan.TravelPlanId);
         _dbContext.Expenses.Add(expense);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
@@ -152,22 +164,21 @@ public class BudgetServiceImpl : IBudgetService
         UpdateExpenseDto dto,
         CancellationToken cancellationToken = default)
     {
-        var context = await GetValidShareContextAsync(token, cancellationToken, requireEdit: true);
-        if (context is null)
+        var plan = await _travelClient.GetSharedPlanContextAsync(token, requireEdit: true, cancellationToken);
+        if (plan is null)
         {
             return null;
         }
 
         var expense = await _dbContext.Expenses
-            .Include(e => e.TravelPlan)
-            .FirstOrDefaultAsync(e => e.Id == expenseId && e.TravelPlanId == context.Value, cancellationToken);
+            .FirstOrDefaultAsync(e => e.Id == expenseId && e.TravelPlanId == plan.TravelPlanId, cancellationToken);
 
         if (expense is null)
         {
             return null;
         }
 
-        ValidateExpenseDate(dto.ExpenseDate, expense.TravelPlan!.StartDate, expense.TravelPlan.EndDate);
+        ValidateExpenseDate(dto.ExpenseDate, plan.StartDate, plan.EndDate);
 
         ExpenseMapper.ApplyUpdate(expense, dto);
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -177,14 +188,14 @@ public class BudgetServiceImpl : IBudgetService
 
     public async Task<bool> DeleteSharedExpenseAsync(string token, int expenseId, CancellationToken cancellationToken = default)
     {
-        var context = await GetValidShareContextAsync(token, cancellationToken, requireEdit: true);
-        if (context is null)
+        var plan = await _travelClient.GetSharedPlanContextAsync(token, requireEdit: true, cancellationToken);
+        if (plan is null)
         {
             return false;
         }
 
         var expense = await _dbContext.Expenses
-            .FirstOrDefaultAsync(e => e.Id == expenseId && e.TravelPlanId == context.Value, cancellationToken);
+            .FirstOrDefaultAsync(e => e.Id == expenseId && e.TravelPlanId == plan.TravelPlanId, cancellationToken);
 
         if (expense is null)
         {
@@ -196,16 +207,9 @@ public class BudgetServiceImpl : IBudgetService
         return true;
     }
 
-    private async Task<BudgetSummaryDto?> BuildSummaryAsync(int planId, CancellationToken cancellationToken)
+    private async Task<BudgetSummaryDto> BuildSummaryAsync(PlanBudgetContext plan, CancellationToken cancellationToken)
     {
-        var plan = await _dbContext.TravelPlans
-            .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.Id == planId, cancellationToken);
-
-        if (plan is null)
-        {
-            return null;
-        }
+        var planId = plan.TravelPlanId;
 
         var byCategory = await _dbContext.Expenses
             .AsNoTracking()
@@ -220,10 +224,7 @@ public class BudgetServiceImpl : IBudgetService
             .ToListAsync(cancellationToken);
 
         var totalSpent = byCategory.Sum(c => c.Amount);
-        var totalEstimated = await _dbContext.Activities
-            .AsNoTracking()
-            .Where(a => a.TravelPlanId == planId && a.EstimatedCost != null)
-            .SumAsync(a => a.EstimatedCost ?? 0, cancellationToken);
+        var totalEstimated = await _travelClient.GetEstimatedActivityTotalAsync(planId, cancellationToken);
 
         return new BudgetSummaryDto
         {
@@ -236,58 +237,10 @@ public class BudgetServiceImpl : IBudgetService
         };
     }
 
-    private async Task<int?> GetValidShareContextAsync(
-        string token,
-        CancellationToken cancellationToken,
-        bool requireEdit = false)
-    {
-        var link = await _dbContext.ShareLinks
-            .AsNoTracking()
-            .FirstOrDefaultAsync(s => s.Token == token, cancellationToken);
-
-        if (link is null)
-        {
-            return null;
-        }
-
-        if (link.ExpiresAt.HasValue && ToUtc(link.ExpiresAt) <= DateTime.UtcNow)
-        {
-            return null;
-        }
-
-        if (requireEdit && !link.AccessType.Equals("Edit", StringComparison.OrdinalIgnoreCase))
-        {
-            return null;
-        }
-
-        return link.TravelPlanId;
-    }
-
-    private static DateTime ToUtc(DateTime? value)
-    {
-        if (!value.HasValue)
-        {
-            return DateTime.MinValue;
-        }
-
-        return value.Value.Kind switch
-        {
-            DateTimeKind.Utc => value.Value,
-            DateTimeKind.Local => value.Value.ToUniversalTime(),
-            _ => DateTime.SpecifyKind(value.Value, DateTimeKind.Utc)
-        };
-    }
-
     private async Task<bool> PlanExistsForUserAsync(int userId, int planId, CancellationToken cancellationToken)
     {
-        return await GetOwnedPlanAsync(userId, planId, cancellationToken) is not null;
-    }
-
-    private async Task<Models.TravelPlan?> GetOwnedPlanAsync(int userId, int planId, CancellationToken cancellationToken)
-    {
-        return await _dbContext.TravelPlans
-            .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.Id == planId && p.UserId == userId, cancellationToken);
+        var plan = await _travelClient.GetOwnedPlanAsync(planId, cancellationToken);
+        return plan is not null && plan.UserId == userId;
     }
 
     private static void ValidateExpenseDate(DateOnly expenseDate, DateOnly startDate, DateOnly endDate)
@@ -297,21 +250,5 @@ public class BudgetServiceImpl : IBudgetService
             throw new ArgumentException(
                 $"Datum troška mora biti u periodu putovanja ({startDate:yyyy-MM-dd} – {endDate:yyyy-MM-dd}).");
         }
-    }
-
-    private async Task<Models.Expense?> GetOwnedExpenseAsync(
-        int userId,
-        int planId,
-        int expenseId,
-        CancellationToken cancellationToken)
-    {
-        return await _dbContext.Expenses
-            .Include(e => e.TravelPlan)
-            .FirstOrDefaultAsync(
-                e => e.Id == expenseId
-                    && e.TravelPlanId == planId
-                    && e.TravelPlan != null
-                    && e.TravelPlan.UserId == userId,
-                cancellationToken);
     }
 }

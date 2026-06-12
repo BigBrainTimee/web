@@ -2,13 +2,16 @@ using System.Fabric;
 using System.IO;
 using System.Text;
 using Microsoft.Extensions.Hosting;
+using TravelService.Clients;
 using TravelService.Configuration;
 using TravelService.Data;
 using TravelService.Json;
 using TravelService.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.ServiceFabric.Services.Communication.AspNetCore;
@@ -38,17 +41,25 @@ internal sealed class TravelServiceHost : StatefulService
                 {
                     ServiceEventSource.Current.ServiceMessage(serviceContext, $"Starting Kestrel on {url}");
 
-                    var builder = WebApplication.CreateBuilder();
+                    var contentRoot = AppContext.BaseDirectory;
+                    var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+                    {
+                        ContentRootPath = contentRoot,
+                    });
 
                     builder.Services.AddSingleton(serviceContext);
                     builder.Configuration
-                        .SetBasePath(Directory.GetCurrentDirectory())
+                        .SetBasePath(contentRoot)
                         .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
                         .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")}.json", optional: true);
 
                     builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
+                    builder.Services.Configure<ServiceUrlsSettings>(builder.Configuration.GetSection("ServiceUrls"));
+                    builder.Services.AddHttpContextAccessor();
+                    builder.Services.AddHttpClient<IBudgetClient, BudgetClient>()
+                        .ConfigureHttpClient(client => client.Timeout = TimeSpan.FromSeconds(15));
                     builder.Services.AddDbContext<TravelDbContext>(options =>
-                        options.UseSqlServer(builder.Configuration.GetConnectionString("TravelPlannerDb")));
+                        options.UseSqlServer(builder.Configuration.GetRequiredConnectionString("TravelDb", "TravelPlannerDb")));
                     builder.Services.AddScoped<ITravelPlanService, TravelPlanService>();
                     builder.Services.AddSingleton<IPlanReportPdfGenerator, PlanReportPdfGenerator>();
 
@@ -85,7 +96,7 @@ internal sealed class TravelServiceHost : StatefulService
 
                     builder.WebHost
                         .UseKestrel()
-                        .UseContentRoot(Directory.GetCurrentDirectory())
+                        .UseContentRoot(contentRoot)
                         .UseServiceFabricIntegration(listener, ServiceFabricIntegrationOptions.None)
                         .UseUrls(url);
 

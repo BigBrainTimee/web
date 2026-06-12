@@ -1,46 +1,20 @@
 /*
-    ZASTARELO — koristi odvojene migracije:
-    001_AuthDb.sql, 002_TravelDb.sql, 003_BudgetDb.sql
-
-    Travel Planner - stara zajednička šema (jedna baza)
+    TravelService baza — planovi, destinacije, aktivnosti, checklist, share linkovi
+    UserId je logička referenca na AuthDb (bez FK između baza).
 */
 
 USE master;
 GO
 
-IF NOT EXISTS (SELECT 1 FROM sys.databases WHERE name = N'TravelPlannerDb')
+IF NOT EXISTS (SELECT 1 FROM sys.databases WHERE name = N'TravelDb')
 BEGIN
-    CREATE DATABASE TravelPlannerDb;
+    CREATE DATABASE TravelDb;
 END
 GO
 
-USE TravelPlannerDb;
+USE TravelDb;
 GO
 
-/* ============================================================
-   USERS
-   ============================================================ */
-IF OBJECT_ID(N'dbo.Users', N'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.Users
-    (
-        Id            INT IDENTITY(1, 1) NOT NULL,
-        Name          NVARCHAR(100)      NOT NULL,
-        Email         NVARCHAR(256)      NOT NULL,
-        PasswordHash  NVARCHAR(512)      NOT NULL,
-        Role          NVARCHAR(20)       NOT NULL,
-        CreatedAt     DATETIME2(0)       NOT NULL CONSTRAINT DF_Users_CreatedAt DEFAULT (SYSUTCDATETIME()),
-
-        CONSTRAINT PK_Users PRIMARY KEY CLUSTERED (Id),
-        CONSTRAINT UQ_Users_Email UNIQUE (Email),
-        CONSTRAINT CK_Users_Role CHECK (Role IN (N'User', N'Admin'))
-    );
-END
-GO
-
-/* ============================================================
-   TRAVEL PLANS
-   ============================================================ */
 IF OBJECT_ID(N'dbo.TravelPlans', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.TravelPlans
@@ -57,17 +31,12 @@ BEGIN
         UpdatedAt      DATETIME2(0)       NOT NULL CONSTRAINT DF_TravelPlans_UpdatedAt DEFAULT (SYSUTCDATETIME()),
 
         CONSTRAINT PK_TravelPlans PRIMARY KEY CLUSTERED (Id),
-        CONSTRAINT FK_TravelPlans_Users FOREIGN KEY (UserId)
-            REFERENCES dbo.Users (Id) ON DELETE CASCADE,
         CONSTRAINT CK_TravelPlans_Dates CHECK (EndDate >= StartDate),
         CONSTRAINT CK_TravelPlans_PlannedBudget CHECK (PlannedBudget >= 0)
     );
 END
 GO
 
-/* ============================================================
-   DESTINATIONS
-   ============================================================ */
 IF OBJECT_ID(N'dbo.Destinations', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.Destinations
@@ -88,9 +57,6 @@ BEGIN
 END
 GO
 
-/* ============================================================
-   ACTIVITIES
-   ============================================================ */
 IF OBJECT_ID(N'dbo.Activities', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.Activities
@@ -117,40 +83,6 @@ BEGIN
 END
 GO
 
-/* ============================================================
-   EXPENSES
-   ============================================================ */
-IF OBJECT_ID(N'dbo.Expenses', N'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.Expenses
-    (
-        Id             INT IDENTITY(1, 1) NOT NULL,
-        TravelPlanId   INT                NOT NULL,
-        Name           NVARCHAR(200)      NOT NULL,
-        Category       NVARCHAR(50)       NOT NULL,
-        Amount         DECIMAL(18, 2)     NOT NULL,
-        ExpenseDate    DATE               NOT NULL,
-        Description    NVARCHAR(MAX)      NULL,
-
-        CONSTRAINT PK_Expenses PRIMARY KEY CLUSTERED (Id),
-        CONSTRAINT FK_Expenses_TravelPlans FOREIGN KEY (TravelPlanId)
-            REFERENCES dbo.TravelPlans (Id) ON DELETE CASCADE,
-        CONSTRAINT CK_Expenses_Amount CHECK (Amount >= 0),
-        CONSTRAINT CK_Expenses_Category CHECK (Category IN (
-            N'Transport',
-            N'Accommodation',
-            N'Food',
-            N'Tickets',
-            N'Shopping',
-            N'Other'
-        ))
-    );
-END
-GO
-
-/* ============================================================
-   CHECKLIST
-   ============================================================ */
 IF OBJECT_ID(N'dbo.ChecklistItems', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.ChecklistItems
@@ -168,9 +100,6 @@ BEGIN
 END
 GO
 
-/* ============================================================
-   SHARE LINKS (QR / token dijeljenje)
-   ============================================================ */
 IF OBJECT_ID(N'dbo.ShareLinks', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.ShareLinks
@@ -191,9 +120,6 @@ BEGIN
 END
 GO
 
-/* ============================================================
-   INDEKSI
-   ============================================================ */
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_TravelPlans_UserId' AND object_id = OBJECT_ID(N'dbo.TravelPlans'))
     CREATE NONCLUSTERED INDEX IX_TravelPlans_UserId ON dbo.TravelPlans (UserId);
 
@@ -203,9 +129,6 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Destinations_TravelPl
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Activities_TravelPlanId_ActivityDate' AND object_id = OBJECT_ID(N'dbo.Activities'))
     CREATE NONCLUSTERED INDEX IX_Activities_TravelPlanId_ActivityDate ON dbo.Activities (TravelPlanId, ActivityDate);
 
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Expenses_TravelPlanId' AND object_id = OBJECT_ID(N'dbo.Expenses'))
-    CREATE NONCLUSTERED INDEX IX_Expenses_TravelPlanId ON dbo.Expenses (TravelPlanId);
-
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_ChecklistItems_TravelPlanId' AND object_id = OBJECT_ID(N'dbo.ChecklistItems'))
     CREATE NONCLUSTERED INDEX IX_ChecklistItems_TravelPlanId ON dbo.ChecklistItems (TravelPlanId);
 
@@ -213,5 +136,5 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_ShareLinks_TravelPlan
     CREATE NONCLUSTERED INDEX IX_ShareLinks_TravelPlanId ON dbo.ShareLinks (TravelPlanId);
 GO
 
-PRINT N'Baza TravelPlannerDb je uspješno kreirana ili već postoji sa kompletnom šemom.';
+PRINT N'TravelDb je spremna.';
 GO

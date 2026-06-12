@@ -72,6 +72,7 @@ export function createSharedPlan(data) {
           travelPlanId: data.budgetSummary.travelPlanId,
           plannedBudget: data.budgetSummary.plannedBudget,
           totalSpent: data.budgetSummary.totalSpent,
+          totalEstimated: data.budgetSummary.totalEstimated ?? 0,
           remaining: data.budgetSummary.remaining,
           byCategory: (data.budgetSummary.byCategory ?? []).map((item) => ({
             category: item.category,

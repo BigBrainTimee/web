@@ -3,7 +3,7 @@ using TravelService.Dtos;
 using TravelService.Services;
 
 using Microsoft.AspNetCore.Authorization;
-
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 
@@ -258,68 +258,6 @@ public class SharedPlansController : ControllerBase
     {
 
         var deleted = await _travelPlanService.DeleteSharedActivityAsync(token, activityId, cancellationToken);
-
-        return deleted
-
-            ? NoContent()
-
-            : NotFound(new { message = "Share link not found, expired, or read-only." });
-
-    }
-
-
-
-    [Authorize]
-    [HttpPost("expenses")]
-
-    public async Task<ActionResult<ExpenseResponseDto>> AddExpense(
-
-        string token,
-
-        [FromBody] CreateExpenseDto request,
-
-        CancellationToken cancellationToken)
-
-    {
-
-        if (!ModelState.IsValid) return ValidationProblem(ModelState);
-
-
-
-        try
-
-        {
-
-            var expense = await _travelPlanService.AddSharedExpenseAsync(token, request, cancellationToken);
-
-            return expense is null
-
-                ? NotFound(new { message = "Share link not found, expired, or read-only." })
-
-                : Ok(expense);
-
-        }
-
-        catch (ArgumentException ex)
-
-        {
-
-            return BadRequest(new { message = ex.Message });
-
-        }
-
-    }
-
-
-
-    [Authorize]
-    [HttpDelete("expenses/{expenseId:int}")]
-
-    public async Task<IActionResult> DeleteExpense(string token, int expenseId, CancellationToken cancellationToken)
-
-    {
-
-        var deleted = await _travelPlanService.DeleteSharedExpenseAsync(token, expenseId, cancellationToken);
 
         return deleted
 

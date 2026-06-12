@@ -13,26 +13,37 @@ Web aplikacija za planiranje putovanja (mikroservisna arhitektura, React fronten
 
 ## Pokretanje
 
-### 1. Baza podataka (Docker)
+### 1. Baze podataka (Docker + 3 odvojene baze)
 
 ```powershell
 docker run -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=Str0ng!Pass123" -p 1435:1433 --name web2 -d mcr.microsoft.com/mssql/server:2022-latest
+
+Start-Sleep -Seconds 30
+
+docker cp "d:\Moji projekti\web projekat\Migrations\001_AuthDb.sql" web2:/tmp/001_AuthDb.sql
+docker cp "d:\Moji projekti\web projekat\Migrations\002_TravelDb.sql" web2:/tmp/002_TravelDb.sql
+docker cp "d:\Moji projekti\web projekat\Migrations\003_BudgetDb.sql" web2:/tmp/003_BudgetDb.sql
+
+docker exec web2 /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "Str0ng!Pass123" -i /tmp/001_AuthDb.sql
+docker exec web2 /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "Str0ng!Pass123" -i /tmp/002_TravelDb.sql
+docker exec web2 /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "Str0ng!Pass123" -i /tmp/003_BudgetDb.sql
 ```
 
 Ako kontejner već postoji: `docker start web2`
 
-### 2. Migracija (SSMS)
+| Servis | Baza | Tabele |
+|--------|------|--------|
+| AuthService | `AuthDb` | Users |
+| TravelService | `TravelDb` | TravelPlans, Destinations, Activities, ChecklistItems, ShareLinks |
+| BudgetService | `BudgetDb` | Expenses |
 
-1. Poveži se na `localhost,1435` (korisnik `sa`, lozinka `Str0ng!Pass123`)
-2. Pokreni skriptu `Migrations/001_InitialSchema.sql`
-
-### 3. Backend
+### 2. Backend
 
 1. Otvori `web projekat.sln` u Visual Studio
 2. Publish → profil **Local.1Node**
 3. Gateway: http://localhost:8080
 
-### 4. Frontend
+### 3. Frontend
 
 ```powershell
 cd frontend

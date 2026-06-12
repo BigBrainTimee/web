@@ -1,3 +1,4 @@
+using TravelService.Clients;
 using TravelService.Data;
 using TravelService.Dtos;
 using TravelService.Mappers;
@@ -8,10 +9,12 @@ namespace TravelService.Services;
 public class TravelPlanService : ITravelPlanService
 {
     private readonly TravelDbContext _dbContext;
+    private readonly IBudgetClient _budgetClient;
 
-    public TravelPlanService(TravelDbContext dbContext)
+    public TravelPlanService(TravelDbContext dbContext, IBudgetClient budgetClient)
     {
         _dbContext = dbContext;
+        _budgetClient = budgetClient;
     }
 
     public async Task<IReadOnlyList<TravelPlanResponseDto>> GetAllForUserAsync(int userId, CancellationToken cancellationToken = default)
@@ -354,6 +357,27 @@ public class TravelPlanService : ITravelPlanService
         return true;
     }
 
+    public async Task<SharedPlanContextDto?> GetSharedPlanContextAsync(string token, CancellationToken cancellationToken = default)
+    {
+        var context = await GetValidShareContextAsync(token, cancellationToken);
+        if (context is null)
+        {
+            return null;
+        }
+
+        var (link, plan) = context.Value;
+
+        return new SharedPlanContextDto
+        {
+            TravelPlanId = plan.Id,
+            UserId = plan.UserId,
+            PlannedBudget = plan.PlannedBudget,
+            StartDate = plan.StartDate,
+            EndDate = plan.EndDate,
+            CanEdit = link.AccessType.Equals("Edit", StringComparison.OrdinalIgnoreCase),
+        };
+    }
+
     public async Task<SharedPlanResponseDto?> GetSharedPlanAsync(string token, CancellationToken cancellationToken = default)
     {
         var context = await GetValidShareContextAsync(token, cancellationToken);
@@ -364,18 +388,20 @@ public class TravelPlanService : ITravelPlanService
 
         var (link, plan) = context.Value;
         await EnsureDefaultChecklistItemsAsync(plan.Id, cancellationToken);
-        var report = await BuildPlanReportAsync(plan, cancellationToken);
+        var travelData = await LoadSharedTravelDataAsync(plan, cancellationToken);
+        var expenses = await _budgetClient.GetExpensesByPlanIdInternalAsync(plan.Id, cancellationToken);
+        var budgetSummary = BuildSharedBudgetSummary(plan, travelData.Activities, expenses);
 
         return new SharedPlanResponseDto
         {
             AccessType = link.AccessType,
             CanEdit = link.AccessType.Equals("Edit", StringComparison.OrdinalIgnoreCase),
-            Plan = report.Plan,
-            Destinations = report.Destinations,
-            Activities = report.Activities,
-            ChecklistItems = report.ChecklistItems,
-            Expenses = report.Expenses,
-            BudgetSummary = report.BudgetSummary
+            Plan = TravelPlanMapper.ToResponseDto(plan),
+            Destinations = travelData.Destinations,
+            Activities = travelData.Activities,
+            ChecklistItems = travelData.ChecklistItems,
+            Expenses = expenses,
+            BudgetSummary = budgetSummary
         };
     }
 
@@ -593,42 +619,67 @@ public class TravelPlanService : ITravelPlanService
         return true;
     }
 
-    public async Task<ExpenseResponseDto?> AddSharedExpenseAsync(string token, CreateExpenseDto dto, CancellationToken cancellationToken = default)
+    private async Task<(IReadOnlyList<DestinationResponseDto> Destinations, IReadOnlyList<ActivityResponseDto> Activities, IReadOnlyList<ChecklistItemResponseDto> ChecklistItems)> LoadSharedTravelDataAsync(
+        Models.TravelPlan plan,
+        CancellationToken cancellationToken)
     {
-        var context = await GetValidShareContextAsync(token, cancellationToken, requireEdit: true);
-        if (context is null)
-        {
-            return null;
-        }
+        var planId = plan.Id;
 
-        var planId = context.Value.plan.Id;
-        var expense = ExpenseMapper.ToEntity(dto, planId);
-        _dbContext.Expenses.Add(expense);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        var destinations = await _dbContext.Destinations
+            .AsNoTracking()
+            .Where(d => d.TravelPlanId == planId)
+            .OrderBy(d => d.ArrivalDate)
+            .ToListAsync(cancellationToken);
 
-        return ExpenseMapper.ToResponseDto(expense);
+        var activities = await _dbContext.Activities
+            .AsNoTracking()
+            .Where(a => a.TravelPlanId == planId)
+            .OrderBy(a => a.ActivityDate)
+            .ThenBy(a => a.ActivityTime)
+            .ToListAsync(cancellationToken);
+
+        var checklistItems = await _dbContext.ChecklistItems
+            .AsNoTracking()
+            .Where(c => c.TravelPlanId == planId)
+            .OrderBy(c => c.SortOrder)
+            .ThenBy(c => c.Id)
+            .ToListAsync(cancellationToken);
+
+        return (
+            destinations.Select(DestinationMapper.ToResponseDto).ToList(),
+            activities.Select(ActivityMapper.ToResponseDto).ToList(),
+            checklistItems.Select(ChecklistItemMapper.ToResponseDto).ToList());
     }
 
-    public async Task<bool> DeleteSharedExpenseAsync(string token, int expenseId, CancellationToken cancellationToken = default)
+    private static BudgetSummaryDto BuildSharedBudgetSummary(
+        Models.TravelPlan plan,
+        IReadOnlyList<ActivityResponseDto> activities,
+        IReadOnlyList<ExpenseResponseDto> expenses)
     {
-        var context = await GetValidShareContextAsync(token, cancellationToken, requireEdit: true);
-        if (context is null)
+        var byCategory = expenses
+            .GroupBy(e => e.Category)
+            .Select(g => new CategorySummaryDto
+            {
+                Category = g.Key,
+                Amount = g.Sum(e => e.Amount)
+            })
+            .OrderBy(c => c.Category)
+            .ToList();
+
+        var totalSpent = byCategory.Sum(c => c.Amount);
+        var totalEstimated = activities
+            .Where(a => a.EstimatedCost.HasValue)
+            .Sum(a => a.EstimatedCost ?? 0);
+
+        return new BudgetSummaryDto
         {
-            return false;
-        }
-
-        var planId = context.Value.plan.Id;
-        var expense = await _dbContext.Expenses
-            .FirstOrDefaultAsync(e => e.Id == expenseId && e.TravelPlanId == planId, cancellationToken);
-
-        if (expense is null)
-        {
-            return false;
-        }
-
-        _dbContext.Expenses.Remove(expense);
-        await _dbContext.SaveChangesAsync(cancellationToken);
-        return true;
+            TravelPlanId = plan.Id,
+            PlannedBudget = plan.PlannedBudget,
+            TotalSpent = totalSpent,
+            TotalEstimated = totalEstimated,
+            Remaining = plan.PlannedBudget - totalSpent - totalEstimated,
+            ByCategory = byCategory
+        };
     }
 
     private async Task<(Models.ShareLink link, Models.TravelPlan plan)?> GetValidShareContextAsync(
@@ -684,27 +735,19 @@ public class TravelPlanService : ITravelPlanService
             .ThenBy(c => c.Id)
             .ToListAsync(cancellationToken);
 
-        var expenses = await _dbContext.Expenses
-            .AsNoTracking()
-            .Where(e => e.TravelPlanId == planId)
-            .OrderByDescending(e => e.ExpenseDate)
-            .ThenBy(e => e.Id)
-            .ToListAsync(cancellationToken);
-
-        var byCategory = expenses
-            .GroupBy(e => e.Category)
-            .Select(g => new CategorySummaryDto
+        var expenses = await _budgetClient.GetExpensesAsync(planId, cancellationToken);
+        var budgetSummary = await _budgetClient.GetSummaryAsync(planId, cancellationToken)
+            ?? new BudgetSummaryDto
             {
-                Category = g.Key,
-                Amount = g.Sum(e => e.Amount)
-            })
-            .OrderBy(c => c.Category)
-            .ToList();
-
-        var totalSpent = byCategory.Sum(c => c.Amount);
-        var totalEstimated = activities
-            .Where(a => a.EstimatedCost.HasValue)
-            .Sum(a => a.EstimatedCost ?? 0);
+                TravelPlanId = planId,
+                PlannedBudget = plan.PlannedBudget,
+                TotalSpent = 0,
+                TotalEstimated = activities
+                    .Where(a => a.EstimatedCost.HasValue)
+                    .Sum(a => a.EstimatedCost ?? 0),
+                Remaining = plan.PlannedBudget,
+                ByCategory = Array.Empty<CategorySummaryDto>()
+            };
 
         return new TravelPlanReportDto
         {
@@ -712,16 +755,8 @@ public class TravelPlanService : ITravelPlanService
             Destinations = destinations.Select(DestinationMapper.ToResponseDto).ToList(),
             Activities = activities.Select(ActivityMapper.ToResponseDto).ToList(),
             ChecklistItems = checklistItems.Select(ChecklistItemMapper.ToResponseDto).ToList(),
-            Expenses = expenses.Select(ExpenseMapper.ToResponseDto).ToList(),
-            BudgetSummary = new BudgetSummaryDto
-            {
-                TravelPlanId = planId,
-                PlannedBudget = plan.PlannedBudget,
-                TotalSpent = totalSpent,
-                TotalEstimated = totalEstimated,
-                Remaining = plan.PlannedBudget - totalSpent - totalEstimated,
-                ByCategory = byCategory
-            }
+            Expenses = expenses,
+            BudgetSummary = budgetSummary
         };
     }
 

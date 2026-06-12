@@ -16,7 +16,7 @@ const sections = getPlanSections({ includeSharing: false });
 
 export default function SharedPlanPage() {
   const { token: shareToken } = useParams();
-  const { token: authToken } = useAuth();
+  const { token: authToken, loading: authLoading } = useAuth();
   const [data, setData] = useState(null);
   const [budgetSummary, setBudgetSummary] = useState(null);
   const [expenses, setExpenses] = useState([]);
@@ -50,8 +50,9 @@ export default function SharedPlanPage() {
   }
 
   useEffect(() => {
+    if (authLoading) return;
     loadData();
-  }, [shareToken, authToken]);
+  }, [shareToken, authToken, authLoading]);
 
   function handleSectionChange(sectionId) {
     setActiveSection(sectionId);
@@ -67,7 +68,7 @@ export default function SharedPlanPage() {
     }
   }
 
-  if (loading) {
+  if (authLoading || loading) {
     return <div className="page">Učitavanje deljenog plana...</div>;
   }
 

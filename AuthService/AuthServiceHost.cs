@@ -6,7 +6,9 @@ using AuthService.Data;
 using AuthService.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.ServiceFabric.Services.Communication.AspNetCore;
@@ -31,17 +33,21 @@ internal sealed class AuthServiceHost : StatelessService
                 {
                     ServiceEventSource.Current.ServiceMessage(serviceContext, $"Starting Kestrel on {url}");
 
-                    var builder = WebApplication.CreateBuilder();
+                    var contentRoot = AppContext.BaseDirectory;
+                    var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+                    {
+                        ContentRootPath = contentRoot,
+                    });
 
                     builder.Services.AddSingleton(serviceContext);
                     builder.Configuration
-                        .SetBasePath(Directory.GetCurrentDirectory())
+                        .SetBasePath(contentRoot)
                         .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
                         .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")}.json", optional: true);
 
                     builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
                     builder.Services.AddDbContext<AuthDbContext>(options =>
-                        options.UseSqlServer(builder.Configuration.GetConnectionString("TravelPlannerDb")));
+                        options.UseSqlServer(builder.Configuration.GetRequiredConnectionString("AuthDb", "TravelPlannerDb")));
 
                     builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
                     builder.Services.AddScoped<IUserAuthService, UserAuthService>();
@@ -71,7 +77,7 @@ internal sealed class AuthServiceHost : StatelessService
 
                     builder.WebHost
                         .UseKestrel()
-                        .UseContentRoot(Directory.GetCurrentDirectory())
+                        .UseContentRoot(contentRoot)
                         .UseServiceFabricIntegration(listener, ServiceFabricIntegrationOptions.None)
                         .UseUrls(url);
 

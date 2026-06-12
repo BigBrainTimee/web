@@ -31,7 +31,7 @@ public class AuthController : ControllerBase
             var response = await _userAuthService.RegisterAsync(request, cancellationToken);
             return Ok(response);
         }
-        catch (InvalidOperationException ex)
+        catch (InvalidOperationException ex) when (ex.Message.Contains("već postoji", StringComparison.OrdinalIgnoreCase))
         {
             return Conflict(new { message = ex.Message });
         }

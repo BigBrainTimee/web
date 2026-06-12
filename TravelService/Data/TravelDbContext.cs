@@ -15,7 +15,6 @@ public class TravelDbContext : DbContext
     public DbSet<Activity> Activities => Set<Activity>();
     public DbSet<ChecklistItem> ChecklistItems => Set<ChecklistItem>();
     public DbSet<ShareLink> ShareLinks => Set<ShareLink>();
-    public DbSet<Expense> Expenses => Set<Expense>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -74,20 +73,6 @@ public class TravelDbContext : DbContext
                 .WithMany(p => p.ShareLinks)
                 .HasForeignKey(s => s.TravelPlanId)
                 .OnDelete(DeleteBehavior.Cascade);
-        });
-
-        modelBuilder.Entity<Expense>(entity =>
-        {
-            entity.ToTable("Expenses");
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
-            entity.Property(e => e.Category).HasMaxLength(50).IsRequired();
-            entity.Property(e => e.Amount).HasColumnType("decimal(18,2)");
-            entity.HasOne(e => e.TravelPlan)
-                .WithMany()
-                .HasForeignKey(e => e.TravelPlanId)
-                .OnDelete(DeleteBehavior.Cascade);
-            entity.HasIndex(e => e.TravelPlanId);
         });
 
         modelBuilder.Entity<ChecklistItem>(entity =>
