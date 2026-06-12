@@ -87,6 +87,7 @@ export default function AdminUsersPage() {
           <thead>
             <tr>
               <th>Ime</th>
+              <th>Prezime</th>
               <th>Email</th>
               <th>Uloga</th>
               <th>Kreiran</th>
@@ -100,6 +101,7 @@ export default function AdminUsersPage() {
               return (
                 <tr key={user.id}>
                   <td>{user.name}</td>
+                  <td>{user.lastName || '—'}</td>
                   <td>{user.email}</td>
                   <td>
                     {isSelf ? (
@@ -122,7 +124,7 @@ export default function AdminUsersPage() {
                       <button
                         type="button"
                         className="btn btn-danger btn-sm"
-                        onClick={() => handleDelete(user.id, user.name)}
+                        onClick={() => handleDelete(user.id, user.fullName || user.name)}
                       >
                         Obriši
                       </button>

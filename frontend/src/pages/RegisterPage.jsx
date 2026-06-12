@@ -7,7 +7,7 @@ import { ApiError } from '../services/apiClient';
 export default function RegisterPage() {
   const { register, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const [form, setForm] = useState({ name: '', lastName: '', email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -24,8 +24,13 @@ export default function RegisterPage() {
   async function handleSubmit(event) {
     event.preventDefault();
 
-    if (!form.name.trim() || !form.email || !form.password) {
+    if (!form.name.trim() || !form.lastName.trim() || !form.email || !form.password) {
       setError('Sva polja su obavezna.');
+      return;
+    }
+
+    if (form.name.trim().length < 2 || form.lastName.trim().length < 2) {
+      setError('Ime i prezime moraju imati bar 2 karaktera.');
       return;
     }
 
@@ -58,6 +63,11 @@ export default function RegisterPage() {
         <label>
           Ime
           <input name="name" value={form.name} onChange={handleChange} />
+        </label>
+
+        <label>
+          Prezime
+          <input name="lastName" value={form.lastName} onChange={handleChange} />
         </label>
 
         <label>

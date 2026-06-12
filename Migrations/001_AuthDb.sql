@@ -20,6 +20,7 @@ BEGIN
     (
         Id            INT IDENTITY(1, 1) NOT NULL,
         Name          NVARCHAR(100)      NOT NULL,
+        LastName      NVARCHAR(100)      NOT NULL CONSTRAINT DF_Users_LastName DEFAULT (N''),
         Email         NVARCHAR(256)      NOT NULL,
         PasswordHash  NVARCHAR(512)      NOT NULL,
         Role          NVARCHAR(20)       NOT NULL,

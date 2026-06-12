@@ -20,7 +20,7 @@ export default function Layout({ children }) {
           <nav className="nav-links">
             <Link to="/plans">Planovi</Link>
             {user?.role === 'Admin' && <Link to="/admin/users">Administracija</Link>}
-            <span className="user-badge">{user?.name}</span>
+            <span className="user-badge">{user?.fullName || user?.name}</span>
             <button type="button" className="btn btn-secondary" onClick={handleLogout}>
               Odjava
             </button>

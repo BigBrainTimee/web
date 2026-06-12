@@ -9,11 +9,11 @@ export async function getUsers(token) {
 }
 
 export async function addUser(token, payload) {
-  const { name, email, password, role } = payload;
+  const { name, lastName, email, password, role } = payload;
 
   const registered = await apiRequest('/api/auth/register', {
     method: 'POST',
-    body: { name, email, password },
+    body: { name, lastName, email, password },
   });
 
   const user = mapUser(registered.user);

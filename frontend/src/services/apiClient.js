@@ -64,6 +64,9 @@ export async function apiRequest(path, options = {}) {
     });
   } catch (err) {
     if (err?.name === 'AbortError') {
+      if (signal?.aborted) {
+        throw err;
+      }
       throw new ApiError('Zahtev je istekao. Proveri da li su backend servisi pokrenuti.', 408);
     }
     throw err;

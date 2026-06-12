@@ -95,7 +95,7 @@ public class UserAuthService : IUserAuthService
         }
 
         var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
-        var user = UserMapper.ToEntity(request.Name, request.Email, passwordHash, request.Role);
+        var user = UserMapper.ToEntity(request.Name, request.LastName, request.Email, passwordHash, request.Role);
 
         _dbContext.Users.Add(user);
         await _dbContext.SaveChangesAsync(cancellationToken);
