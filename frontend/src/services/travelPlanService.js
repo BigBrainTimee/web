@@ -2,6 +2,7 @@ import { createDestination as mapDestination } from '../models/Destination';
 import { createTravelPlan as mapTravelPlan } from '../models/TravelPlan';
 import { createActivity as mapActivity } from '../models/Activity';
 import { createChecklistItem as mapChecklistItem } from '../models/ChecklistItem';
+import { sanitizeActivityPayload } from '../utils/activityPayload';
 import { apiDownload, apiRequest } from './apiClient';
 
 const BASE = '/api/travel/travel-plans';
@@ -90,7 +91,7 @@ export async function createActivity(token, planId, payload) {
   const data = await apiRequest(`${BASE}/${planId}/activities`, {
     method: 'POST',
     token,
-    body: payload,
+    body: sanitizeActivityPayload(payload),
   });
   return mapActivity(data);
 }
@@ -99,7 +100,7 @@ export async function updateActivity(token, planId, activityId, payload) {
   const data = await apiRequest(`${BASE}/${planId}/activities/${activityId}`, {
     method: 'PUT',
     token,
-    body: payload,
+    body: sanitizeActivityPayload(payload),
   });
   return mapActivity(data);
 }

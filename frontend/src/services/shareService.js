@@ -3,6 +3,7 @@ import { createChecklistItem as mapChecklistItem } from '../models/ChecklistItem
 import { createDestination as mapDestination } from '../models/Destination';
 import { createExpense as mapExpense } from '../models/Expense';
 import { createShareLink as mapShareLink, createSharedPlan as mapSharedPlan } from '../models/ShareLink';
+import { sanitizeActivityPayload } from '../utils/activityPayload';
 import { apiRequest } from './apiClient';
 
 const PLAN_BASE = '/api/travel/travel-plans';
@@ -63,7 +64,7 @@ export async function addSharedActivity(shareToken, payload, authToken) {
   const data = await apiRequest(`${SHARED_BASE}/${shareToken}/activities`, {
     method: 'POST',
     token: authToken,
-    body: payload,
+    body: sanitizeActivityPayload(payload),
   });
   return mapActivity(data);
 }
@@ -79,7 +80,7 @@ export async function updateSharedActivity(shareToken, activityId, payload, auth
   const data = await apiRequest(`${SHARED_BASE}/${shareToken}/activities/${activityId}`, {
     method: 'PUT',
     token: authToken,
-    body: payload,
+    body: sanitizeActivityPayload(payload),
   });
   return mapActivity(data);
 }

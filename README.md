@@ -16,14 +16,14 @@ Web aplikacija za planiranje putovanja (mikroservisna arhitektura, React fronten
 ### 1. Baza podataka (Docker)
 
 ```powershell
-docker run -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=Str0ng!Pass123" -p 1434:1433 --name web -d mcr.microsoft.com/mssql/server:2022-latest
+docker run -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=Str0ng!Pass123" -p 1435:1433 --name web2 -d mcr.microsoft.com/mssql/server:2022-latest
 ```
 
-Ako kontejner već postoji: `docker start web`
+Ako kontejner već postoji: `docker start web2`
 
 ### 2. Migracija (SSMS)
 
-1. Poveži se na `localhost,1434` (korisnik `sa`, lozinka `Str0ng!Pass123`)
+1. Poveži se na `localhost,1435` (korisnik `sa`, lozinka `Str0ng!Pass123`)
 2. Pokreni skriptu `Migrations/001_InitialSchema.sql`
 
 ### 3. Backend

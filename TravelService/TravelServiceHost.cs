@@ -4,6 +4,7 @@ using System.Text;
 using Microsoft.Extensions.Hosting;
 using TravelService.Configuration;
 using TravelService.Data;
+using TravelService.Json;
 using TravelService.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
@@ -72,7 +73,11 @@ internal sealed class TravelServiceHost : StatefulService
                         });
 
                     builder.Services.AddAuthorization();
-                    builder.Services.AddControllers();
+                    builder.Services.AddControllers()
+                        .AddJsonOptions(options =>
+                        {
+                            options.JsonSerializerOptions.Converters.Add(new NullableTimeOnlyJsonConverter());
+                        });
                     builder.Services.Configure<HostOptions>(options =>
                     {
                         options.ShutdownTimeout = TimeSpan.FromSeconds(15);
