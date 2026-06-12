@@ -14,12 +14,12 @@ export default function Layout({ children }) {
     <div className="app-shell">
       <header className="app-header">
         <Link to="/" className="brand">
-          Travel Planner
+          Planer putovanja
         </Link>
         {isAuthenticated && (
           <nav className="nav-links">
             <Link to="/plans">Planovi</Link>
-            {user?.role === 'Admin' && <Link to="/admin/users">Admin</Link>}
+            {user?.role === 'Admin' && <Link to="/admin/users">Administracija</Link>}
             <span className="user-badge">{user?.name}</span>
             <button type="button" className="btn btn-secondary" onClick={handleLogout}>
               Odjava

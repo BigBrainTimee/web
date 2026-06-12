@@ -7,6 +7,16 @@ namespace TravelService.Services;
 
 public class PlanReportPdfGenerator : IPlanReportPdfGenerator
 {
+    private static readonly Dictionary<string, string> ExpenseCategoryLabels = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Transport"] = "Prevoz",
+        ["Accommodation"] = "Smeštaj",
+        ["Food"] = "Hrana",
+        ["Tickets"] = "Karte",
+        ["Shopping"] = "Kupovina",
+        ["Other"] = "Ostalo",
+    };
+
     public byte[] Generate(TravelPlanReportDto report)
     {
         return Document.Create(container =>
@@ -21,7 +31,7 @@ public class PlanReportPdfGenerator : IPlanReportPdfGenerator
                 page.Content().Element(c => ComposeContent(c, report));
                 page.Footer().AlignCenter().Text(text =>
                 {
-                    text.Span("Travel Planner — ");
+                    text.Span("Planer putovanja — ");
                     text.Span(DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm")).FontColor(Colors.Grey.Medium);
                     text.Span("  |  Strana ");
                     text.CurrentPageNumber();
@@ -36,7 +46,7 @@ public class PlanReportPdfGenerator : IPlanReportPdfGenerator
     {
         container.Column(column =>
         {
-            column.Item().Text("Izvještaj plana putovanja")
+            column.Item().Text("Izveštaj plana putovanja")
                 .FontSize(18).Bold().FontColor(Colors.Blue.Darken2);
             column.Item().PaddingTop(4).Text(plan.Name).FontSize(14).SemiBold();
             column.Item().Text($"{plan.StartDate:dd.MM.yyyy} — {plan.EndDate:dd.MM.yyyy}")
@@ -100,7 +110,7 @@ public class PlanReportPdfGenerator : IPlanReportPdfGenerator
         {
             row.RelativeItem().Element(c => StatBox(c, "Planirano", $"{summary.PlannedBudget:N2} €"));
             row.RelativeItem().Element(c => StatBox(c, "Sigurno", $"{summary.TotalSpent:N2} €"));
-            row.RelativeItem().Element(c => StatBox(c, "Procijenjeno", $"{summary.TotalEstimated:N2} €"));
+            row.RelativeItem().Element(c => StatBox(c, "Procenjeno", $"{summary.TotalEstimated:N2} €"));
             row.RelativeItem().Element(c => StatBox(c, "Preostalo", $"{summary.Remaining:N2} €"));
         });
 
@@ -123,7 +133,7 @@ public class PlanReportPdfGenerator : IPlanReportPdfGenerator
 
                 foreach (var category in summary.ByCategory)
                 {
-                    table.Cell().Element(CellBody).Text(category.Category);
+                    table.Cell().Element(CellBody).Text(FormatExpenseCategory(category.Category));
                     table.Cell().Element(CellBody).AlignRight().Text($"{category.Amount:N2} €");
                 }
             });
@@ -154,7 +164,7 @@ public class PlanReportPdfGenerator : IPlanReportPdfGenerator
                 {
                     table.Cell().Element(CellBody).Text(expense.ExpenseDate.ToString("dd.MM.yyyy"));
                     table.Cell().Element(CellBody).Text(expense.Name);
-                    table.Cell().Element(CellBody).Text(expense.Category);
+                    table.Cell().Element(CellBody).Text(FormatExpenseCategory(expense.Category));
                     table.Cell().Element(CellBody).AlignRight().Text($"{expense.Amount:N2} €");
                 }
             });
@@ -257,35 +267,97 @@ public class PlanReportPdfGenerator : IPlanReportPdfGenerator
 
     private static void ComposeChecklist(ColumnDescriptor column, IReadOnlyList<ChecklistItemResponseDto> items)
     {
-        column.Item().Element(c => SectionTitle(c, "Packing lista"));
+        column.Item().Element(c => SectionTitle(c, "Lista za pakovanje"));
 
         if (items.Count == 0)
         {
-            column.Item().Text("Packing lista je prazna.").Italic().FontColor(Colors.Grey.Medium);
+            column.Item().Text("Lista za pakovanje je prazna.").Italic().FontColor(Colors.Grey.Medium);
             return;
         }
 
-        column.Item().Table(table =>
+        var defaultItems = items
+            .Where(item => IsDefaultPackingItem(item.Title))
+            .OrderBy(item => item.SortOrder)
+            .ThenBy(item => item.Id)
+            .ToList();
+
+        var customItems = items
+            .Where(item => !IsDefaultPackingItem(item.Title))
+            .OrderBy(item => item.SortOrder)
+            .ThenBy(item => item.Id)
+            .ToList();
+
+        column.Item().PaddingTop(4).Text("Osnovne stavke").SemiBold().FontSize(10);
+        column.Item().Element(c => ComposeChecklistTable(c, defaultItems));
+
+        if (customItems.Count > 0)
+        {
+            column.Item().PaddingTop(8).Text("Ostalo").SemiBold().FontSize(10);
+            column.Item().Element(c => ComposeChecklistTable(c, customItems));
+        }
+    }
+
+    private static void ComposeChecklistTable(IContainer container, IReadOnlyList<ChecklistItemResponseDto> items)
+    {
+        if (items.Count == 0)
+        {
+            container.Text("—").Italic().FontColor(Colors.Grey.Medium);
+            return;
+        }
+
+        container.Table(table =>
         {
             table.ColumnsDefinition(columns =>
             {
-                columns.ConstantColumn(30);
+                columns.ConstantColumn(36);
                 columns.RelativeColumn();
             });
 
             table.Header(header =>
             {
-                header.Cell().Element(CellHeader).Text("✓");
+                header.Cell().Element(CellHeader).AlignCenter().Text("OK");
                 header.Cell().Element(CellHeader).Text("Stavka");
             });
 
             foreach (var item in items)
             {
-                table.Cell().Element(CellBody).Text(item.IsCompleted ? "✓" : "○");
-                table.Cell().Element(CellBody).Text(item.Title);
+                table.Cell().Element(cell => ChecklistStatusCell(cell, item.IsCompleted));
+                table.Cell().Element(cell => ChecklistTitleCell(cell, item));
             }
         });
     }
+
+    private static void ChecklistStatusCell(IContainer container, bool isCompleted)
+    {
+        container
+            .Border(1)
+            .BorderColor(isCompleted ? Colors.Green.Darken2 : Colors.Grey.Medium)
+            .Background(isCompleted ? Colors.Green.Lighten4 : Colors.White)
+            .PaddingVertical(3)
+            .AlignCenter()
+            .AlignMiddle()
+            .Text(isCompleted ? "X" : string.Empty)
+            .FontSize(10)
+            .SemiBold()
+            .FontColor(Colors.Green.Darken3);
+    }
+
+    private static void ChecklistTitleCell(IContainer container, ChecklistItemResponseDto item)
+    {
+        var text = container.PaddingVertical(4).PaddingHorizontal(6);
+
+        if (item.IsCompleted)
+        {
+            text.Text(item.Title).Strikethrough().FontColor(Colors.Grey.Darken1);
+            return;
+        }
+
+        text.Text(item.Title);
+    }
+
+    private static bool IsDefaultPackingItem(string title) =>
+        ChecklistDefaults.Titles.Any(defaultTitle =>
+            defaultTitle.Equals(title, StringComparison.OrdinalIgnoreCase));
 
     private static void SectionTitle(IContainer container, string title)
     {
@@ -312,6 +384,9 @@ public class PlanReportPdfGenerator : IPlanReportPdfGenerator
 
     private static IContainer CellBody(IContainer container) =>
         container.BorderBottom(1).BorderColor(Colors.Grey.Lighten3).PaddingVertical(4).PaddingHorizontal(6);
+
+    private static string FormatExpenseCategory(string category) =>
+        ExpenseCategoryLabels.TryGetValue(category, out var label) ? label : category;
 
     private static string FormatTime(TimeOnly? time) =>
         time.HasValue ? time.Value.ToString("HH:mm") : "—";

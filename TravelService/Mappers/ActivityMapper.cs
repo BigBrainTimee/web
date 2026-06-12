@@ -59,7 +59,7 @@ public static class ActivityMapper
     {
         if (!ValidStatuses.Contains(status))
         {
-            throw new ArgumentException("Invalid activity status.");
+            throw new ArgumentException("Neispravan status aktivnosti.");
         }
 
         return ValidStatuses.First(s => s.Equals(status, StringComparison.OrdinalIgnoreCase));

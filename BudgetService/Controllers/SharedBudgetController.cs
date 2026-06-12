@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Mvc;
 namespace BudgetService.Controllers;
 
 [ApiController]
-[AllowAnonymous]
 [Route("api/budget/shared/{token}")]
 public class SharedBudgetController : ControllerBase
 {
@@ -17,6 +16,7 @@ public class SharedBudgetController : ControllerBase
         _budgetService = budgetService;
     }
 
+    [AllowAnonymous]
     [HttpGet("summary")]
     public async Task<ActionResult<BudgetSummaryDto>> GetSummary(string token, CancellationToken cancellationToken)
     {
@@ -26,6 +26,7 @@ public class SharedBudgetController : ControllerBase
             : Ok(summary);
     }
 
+    [AllowAnonymous]
     [HttpGet("expenses")]
     public async Task<ActionResult<IReadOnlyList<ExpenseResponseDto>>> GetExpenses(string token, CancellationToken cancellationToken)
     {
@@ -35,6 +36,7 @@ public class SharedBudgetController : ControllerBase
             : Ok(expenses);
     }
 
+    [Authorize]
     [HttpPost("expenses")]
     public async Task<ActionResult<ExpenseResponseDto>> AddExpense(
         string token,
@@ -59,6 +61,7 @@ public class SharedBudgetController : ControllerBase
         }
     }
 
+    [Authorize]
     [HttpPut("expenses/{expenseId:int}")]
     public async Task<ActionResult<ExpenseResponseDto>> UpdateExpense(
         string token,
@@ -84,6 +87,7 @@ public class SharedBudgetController : ControllerBase
         }
     }
 
+    [Authorize]
     [HttpDelete("expenses/{expenseId:int}")]
     public async Task<IActionResult> DeleteExpense(string token, int expenseId, CancellationToken cancellationToken)
     {

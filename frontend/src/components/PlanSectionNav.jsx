@@ -4,7 +4,7 @@ export const PLAN_SECTIONS = {
   destinations: { id: 'destinations', label: 'Destinacije' },
   activities: { id: 'activities', label: 'Aktivnosti' },
   sharing: { id: 'sharing', label: 'Deljenje plana' },
-  checklist: { id: 'checklist', label: 'Packing lista' },
+  checklist: { id: 'checklist', label: 'Lista za pakovanje' },
 };
 
 const SHARED_SECTION_IDS = ['overview', 'expenses', 'destinations', 'activities', 'checklist'];

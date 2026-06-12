@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { QRCode } from 'react-qr-code';
 import { buildShareUrl, formatApiDate, isShareLinkExpired } from '../models/ShareLink';
 import { ApiError } from '../services/apiClient';
+import { getAccessTypeLabel } from '../utils/accessTypes';
 import * as shareService from '../services/shareService';
 
 export default function ShareLinkPanel({ authToken, planId }) {
@@ -46,7 +47,7 @@ export default function ShareLinkPanel({ authToken, planId }) {
   }
 
   async function handleDelete(linkId) {
-    if (!window.confirm('Obrisati share link?')) return;
+    if (!window.confirm('Obrisati link za deljenje?')) return;
 
     try {
       await shareService.deleteShareLink(authToken, planId, linkId);
@@ -67,7 +68,7 @@ export default function ShareLinkPanel({ authToken, planId }) {
   }
 
   if (loading) {
-    return <p className="muted">Učitavanje share linkova...</p>;
+    return <p className="muted">Učitavanje linkova za deljenje...</p>;
   }
 
   return (
@@ -80,8 +81,8 @@ export default function ShareLinkPanel({ authToken, planId }) {
           <label>
             Tip pristupa
             <select value={accessType} onChange={(e) => setAccessType(e.target.value)}>
-              <option value="View">View (samo pregled)</option>
-              <option value="Edit">Edit (destinacije, aktivnosti, troškovi, packing lista)</option>
+              <option value="View">Pregled (samo čitanje)</option>
+              <option value="Edit">Izmena (destinacije, aktivnosti, troškovi, lista za pakovanje)</option>
             </select>
           </label>
           <label>
@@ -97,7 +98,7 @@ export default function ShareLinkPanel({ authToken, planId }) {
       </form>
 
       {links.length === 0 ? (
-        <p className="muted">Još nema share linkova za ovaj plan.</p>
+        <p className="muted">Još nema linkova za deljenje ovog plana.</p>
       ) : (
         <ul className="share-link-list">
           {links.map((link) => {
@@ -109,7 +110,7 @@ export default function ShareLinkPanel({ authToken, planId }) {
               <li key={link.id} className="share-link-card card">
                 <div className="share-link-header">
                   <span className={`badge access-${link.accessType.toLowerCase()}`}>
-                    {link.accessType}
+                    {getAccessTypeLabel(link.accessType)}
                   </span>
                   {hasExpiry && (
                     isExpired

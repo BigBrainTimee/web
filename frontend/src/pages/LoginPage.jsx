@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import AlertMessage from '../components/AlertMessage';
 import { useAuth } from '../context/AuthContext';
 import { ApiError } from '../services/apiClient';
@@ -7,12 +7,17 @@ import { ApiError } from '../services/apiClient';
 export default function LoginPage() {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const rawReturnUrl = searchParams.get('returnUrl');
+  const returnUrl = rawReturnUrl?.startsWith('/') && !rawReturnUrl.startsWith('//')
+    ? rawReturnUrl
+    : '/plans';
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   if (isAuthenticated) {
-    return <Navigate to="/plans" replace />;
+    return <Navigate to={returnUrl} replace />;
   }
 
   function handleChange(event) {
@@ -34,7 +39,7 @@ export default function LoginPage() {
 
     try {
       await login(form);
-      navigate('/plans');
+      navigate(returnUrl);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Prijava nije uspela.');
     } finally {

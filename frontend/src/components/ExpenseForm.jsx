@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { EXPENSE_CATEGORIES } from '../models/Expense';
+import { EXPENSE_CATEGORIES, getExpenseCategoryLabel } from '../models/Expense';
 
 const emptyForm = {
   name: '',
@@ -60,7 +60,7 @@ export default function ExpenseForm({ onSubmit }) {
           Kategorija
           <select name="category" value={form.category} onChange={handleChange}>
             {EXPENSE_CATEGORIES.map((category) => (
-              <option key={category} value={category}>{category}</option>
+              <option key={category} value={category}>{getExpenseCategoryLabel(category)}</option>
             ))}
           </select>
         </label>

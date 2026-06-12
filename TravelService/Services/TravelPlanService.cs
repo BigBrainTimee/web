@@ -34,7 +34,13 @@ public class TravelPlanService : ITravelPlanService
     public async Task<TravelPlanReportDto?> GetPlanReportAsync(int userId, int planId, CancellationToken cancellationToken = default)
     {
         var plan = await GetOwnedPlanAsync(userId, planId, asNoTracking: true, cancellationToken);
-        return plan is null ? null : await BuildPlanReportAsync(plan, cancellationToken);
+        if (plan is null)
+        {
+            return null;
+        }
+
+        await EnsureDefaultChecklistItemsAsync(plan.Id, cancellationToken);
+        return await BuildPlanReportAsync(plan, cancellationToken);
     }
 
     public async Task<TravelPlanResponseDto> CreateAsync(int userId, CreateTravelPlanDto dto, CancellationToken cancellationToken = default)
@@ -45,6 +51,7 @@ public class TravelPlanService : ITravelPlanService
         var plan = TravelPlanMapper.ToEntity(dto, userId);
         _dbContext.TravelPlans.Add(plan);
         await _dbContext.SaveChangesAsync(cancellationToken);
+        await EnsureDefaultChecklistItemsAsync(plan.Id, cancellationToken);
 
         return TravelPlanMapper.ToResponseDto(plan);
     }
@@ -170,7 +177,7 @@ public class TravelPlanService : ITravelPlanService
 
         if (dto.EstimatedCost is < 0)
         {
-            throw new ArgumentException("Estimated cost cannot be negative.");
+            throw new ArgumentException("Procenjeni trošak ne može biti negativan.");
         }
 
         var activity = ActivityMapper.ToEntity(dto, planId);
@@ -194,7 +201,7 @@ public class TravelPlanService : ITravelPlanService
 
         if (dto.EstimatedCost is < 0)
         {
-            throw new ArgumentException("Estimated cost cannot be negative.");
+            throw new ArgumentException("Procenjeni trošak ne može biti negativan.");
         }
 
         ActivityMapper.ApplyUpdate(activity, dto);
@@ -223,6 +230,8 @@ public class TravelPlanService : ITravelPlanService
             return Array.Empty<ChecklistItemResponseDto>();
         }
 
+        await EnsureDefaultChecklistItemsAsync(planId, cancellationToken);
+
         var items = await _dbContext.ChecklistItems
             .AsNoTracking()
             .Where(c => c.TravelPlanId == planId)
@@ -241,6 +250,7 @@ public class TravelPlanService : ITravelPlanService
         }
 
         var item = ChecklistItemMapper.ToEntity(dto, planId);
+        ApplyCustomChecklistSortOrder(item);
         _dbContext.ChecklistItems.Add(item);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
@@ -313,7 +323,7 @@ public class TravelPlanService : ITravelPlanService
 
         if (dto.ExpiresAt.HasValue && ShareLinkMapper.ToUtc(dto.ExpiresAt) <= DateTime.UtcNow)
         {
-            throw new ArgumentException("Expiry date must be in the future.");
+            throw new ArgumentException("Datum isteka mora biti u budućnosti.");
         }
 
         var link = ShareLinkMapper.ToEntity(dto, planId);
@@ -353,6 +363,7 @@ public class TravelPlanService : ITravelPlanService
         }
 
         var (link, plan) = context.Value;
+        await EnsureDefaultChecklistItemsAsync(plan.Id, cancellationToken);
         var report = await BuildPlanReportAsync(plan, cancellationToken);
 
         return new SharedPlanResponseDto
@@ -401,6 +412,7 @@ public class TravelPlanService : ITravelPlanService
 
         var planId = context.Value.plan.Id;
         var item = ChecklistItemMapper.ToEntity(dto, planId);
+        ApplyCustomChecklistSortOrder(item);
         _dbContext.ChecklistItems.Add(item);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
@@ -513,7 +525,7 @@ public class TravelPlanService : ITravelPlanService
 
         if (dto.EstimatedCost is < 0)
         {
-            throw new ArgumentException("Estimated cost cannot be negative.");
+            throw new ArgumentException("Procenjeni trošak ne može biti negativan.");
         }
 
         var activity = ActivityMapper.ToEntity(dto, planId);
@@ -550,7 +562,7 @@ public class TravelPlanService : ITravelPlanService
 
         if (dto.EstimatedCost is < 0)
         {
-            throw new ArgumentException("Estimated cost cannot be negative.");
+            throw new ArgumentException("Procenjeni trošak ne može biti negativan.");
         }
 
         ActivityMapper.ApplyUpdate(activity, dto);
@@ -783,6 +795,51 @@ public class TravelPlanService : ITravelPlanService
                 cancellationToken);
     }
 
+    private async Task EnsureDefaultChecklistItemsAsync(int planId, CancellationToken cancellationToken)
+    {
+        var existingTitles = await _dbContext.ChecklistItems
+            .Where(c => c.TravelPlanId == planId)
+            .Select(c => c.Title)
+            .ToListAsync(cancellationToken);
+
+        var existingSet = existingTitles.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var added = false;
+
+        for (var i = 0; i < ChecklistDefaults.Titles.Length; i++)
+        {
+            var title = ChecklistDefaults.Titles[i];
+            if (existingSet.Contains(title))
+            {
+                continue;
+            }
+
+            _dbContext.ChecklistItems.Add(new Models.ChecklistItem
+            {
+                TravelPlanId = planId,
+                Title = title,
+                IsCompleted = false,
+                SortOrder = i + 1,
+            });
+            added = true;
+        }
+
+        if (added)
+        {
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+    }
+
+    private static void ApplyCustomChecklistSortOrder(Models.ChecklistItem item)
+    {
+        var isDefault = ChecklistDefaults.Titles.Any(
+            title => title.Equals(item.Title, StringComparison.OrdinalIgnoreCase));
+
+        if (!isDefault && item.SortOrder < ChecklistDefaults.CustomSortOrder)
+        {
+            item.SortOrder = ChecklistDefaults.CustomSortOrder;
+        }
+    }
+
     private async Task ValidateDestinationForPlanAsync(int planId, int? destinationId, CancellationToken cancellationToken)
     {
         if (destinationId is null)
@@ -795,7 +852,7 @@ public class TravelPlanService : ITravelPlanService
 
         if (!exists)
         {
-            throw new ArgumentException("Destination does not belong to this travel plan.");
+            throw new ArgumentException("Destinacija ne pripada ovom planu.");
         }
     }
 
@@ -803,7 +860,7 @@ public class TravelPlanService : ITravelPlanService
     {
         if (endDate < startDate)
         {
-            throw new ArgumentException("End date cannot be before start date.");
+            throw new ArgumentException("Krajnji datum ne može biti pre početnog.");
         }
     }
 
@@ -811,7 +868,7 @@ public class TravelPlanService : ITravelPlanService
     {
         if (plannedBudget < 0)
         {
-            throw new ArgumentException("Planned budget cannot be negative.");
+            throw new ArgumentException("Planirani budžet ne može biti negativan.");
         }
     }
 
@@ -819,7 +876,7 @@ public class TravelPlanService : ITravelPlanService
     {
         if (departureDate < arrivalDate)
         {
-            throw new ArgumentException("Departure date cannot be before arrival date.");
+            throw new ArgumentException("Datum odlaska ne može biti pre dolaska.");
         }
     }
 }

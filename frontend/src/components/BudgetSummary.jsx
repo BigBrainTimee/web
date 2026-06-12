@@ -1,3 +1,4 @@
+import { getExpenseCategoryLabel } from '../models/Expense';
 import { enrichBudgetSummary, getEstimatedActivities } from '../utils/budgetUtils';
 
 export default function BudgetSummary({ summary, activities = [] }) {
@@ -27,7 +28,7 @@ export default function BudgetSummary({ summary, activities = [] }) {
           <strong>{enriched.totalSpent.toFixed(2)} €</strong>
         </div>
         <div>
-          <span className="stat-label">Procijenjeni</span>
+          <span className="stat-label">Procenjeni</span>
           <strong>{enriched.totalEstimated.toFixed(2)} €</strong>
         </div>
         <div>
@@ -55,7 +56,7 @@ export default function BudgetSummary({ summary, activities = [] }) {
           <ul className="category-breakdown">
             {enriched.byCategory.map((item) => (
               <li key={item.category}>
-                <span>{item.category}</span>
+                <span>{getExpenseCategoryLabel(item.category)}</span>
                 <strong>{item.amount.toFixed(2)} €</strong>
               </li>
             ))}
@@ -65,13 +66,13 @@ export default function BudgetSummary({ summary, activities = [] }) {
 
       {estimatedActivities.length > 0 && (
         <>
-          <h3 className="budget-subtitle">Procijenjeni troškovi po aktivnostima</h3>
+          <h3 className="budget-subtitle">Procenjeni troškovi po aktivnostima</h3>
           <ul className="category-breakdown estimated-breakdown">
             {estimatedActivities.map((activity) => (
               <li key={activity.id}>
                 <span className="estimated-breakdown-label">
                   {activity.name}
-                  <span className="badge badge-estimated">procijenjeno</span>
+                  <span className="badge badge-estimated">procenjeno</span>
                   <span className="muted estimated-breakdown-date">{activity.activityDate}</span>
                 </span>
                 <strong>{activity.estimatedCost.toFixed(2)} €</strong>

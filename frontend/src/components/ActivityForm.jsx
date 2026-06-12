@@ -164,10 +164,10 @@ export default function ActivityForm({
       </div>
 
       <label>
-        Procijenjeni trošak (€)
+        Procenjeni trošak (€)
         <input type="number" min="0" step="0.01" name="estimatedCost" value={form.estimatedCost} onChange={handleChange} />
         {errors.estimatedCost && <span className="field-error">{errors.estimatedCost}</span>}
-        <span className="field-hint muted">Pojavljuje se u Troškovima kao procijenjeni trošak.</span>
+        <span className="field-hint muted">Pojavljuje se u Troškovima kao procenjeni trošak.</span>
       </label>
 
       {destinations.length > 0 && (

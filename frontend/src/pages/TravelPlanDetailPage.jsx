@@ -3,8 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import AlertMessage from '../components/AlertMessage';
 import ActivitySection from '../components/ActivitySection';
 import BudgetSummary from '../components/BudgetSummary';
-import ChecklistForm from '../components/ChecklistForm';
-import ChecklistList from '../components/ChecklistList';
+import PackingListSection from '../components/PackingListSection';
 import ExpensesSection from '../components/ExpensesSection';
 import DestinationSection from '../components/DestinationSection';
 import PlanSectionNav, { getPlanSections, PLAN_SECTIONS } from '../components/PlanSectionNav';
@@ -14,6 +13,7 @@ import { useAuth } from '../context/AuthContext';
 import { ApiError } from '../services/apiClient';
 import * as budgetService from '../services/budgetService';
 import * as travelPlanService from '../services/travelPlanService';
+import { ensurePackingDefaults } from '../utils/ensurePackingDefaults';
 
 const sections = getPlanSections({ includeSharing: true });
 
@@ -51,7 +51,11 @@ export default function TravelPlanDetailPage() {
       setPlan(planData);
       setDestinations(destinationData);
       setActivities(activityData);
-      setChecklistItems(checklistData);
+      const seededChecklist = await ensurePackingDefaults(
+        (entry) => travelPlanService.createChecklistItem(token, id, entry),
+        checklistData,
+      );
+      setChecklistItems(seededChecklist ?? await travelPlanService.getChecklistItems(token, id));
       setExpenses(expenseData);
       setBudgetSummary(summaryData);
     } catch (err) {
@@ -96,7 +100,7 @@ export default function TravelPlanDetailPage() {
 
     try {
       await travelPlanService.downloadPlanReport(token, id);
-      setSuccess('PDF izvještaj je preuzet.');
+      setSuccess('PDF izveštaj je preuzet.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Preuzimanje PDF-a nije uspelo.');
     } finally {
@@ -182,7 +186,7 @@ export default function TravelPlanDetailPage() {
   async function handleAddChecklistItem(payload) {
     try {
       await travelPlanService.createChecklistItem(token, id, payload);
-      setSuccess('Stavka je dodata u checklistu.');
+      setSuccess('Stavka je dodata u listu za pakovanje.');
       await loadData();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Dodavanje stavke nije uspelo.');
@@ -194,7 +198,7 @@ export default function TravelPlanDetailPage() {
       await travelPlanService.toggleChecklistItem(token, id, itemId);
       await loadData();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Ažuriranje checkliste nije uspelo.');
+      setError(err instanceof ApiError ? err.message : 'Ažuriranje liste za pakovanje nije uspelo.');
     }
   }
 
@@ -316,12 +320,12 @@ export default function TravelPlanDetailPage() {
         return (
           <div className="plan-detail-panel">
             <h2>{PLAN_SECTIONS.checklist.label}</h2>
-            <ChecklistList
+            <PackingListSection
               items={checklistItems}
               onToggle={handleToggleChecklistItem}
               onDelete={handleDeleteChecklistItem}
+              onAdd={handleAddChecklistItem}
             />
-            <ChecklistForm onSubmit={handleAddChecklistItem} />
           </div>
         );
 

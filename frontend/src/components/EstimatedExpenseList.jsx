@@ -4,7 +4,7 @@ export default function EstimatedExpenseList({ activities }) {
   );
 
   if (estimatedActivities.length === 0) {
-    return <p className="muted">Nema procijenjenih troškova iz aktivnosti.</p>;
+    return <p className="muted">Nema procenjenih troškova iz aktivnosti.</p>;
   }
 
   const sorted = [...estimatedActivities].sort((a, b) => {
@@ -20,7 +20,7 @@ export default function EstimatedExpenseList({ activities }) {
         <li key={activity.id} className="item-row estimated-expense-row">
           <div>
             <strong>{activity.name}</strong>
-            <span className="badge badge-estimated">Procijenjeno</span>
+            <span className="badge badge-estimated">Procenjeno</span>
             <p className="muted">{activity.activityDate} · {activity.estimatedCost.toFixed(2)} €</p>
           </div>
         </li>

@@ -13,7 +13,7 @@ export default function ExpensesSection({
     <div className="expenses-split">
       <section className="expenses-column">
         <h3>Sigurni troškovi</h3>
-        <p className="muted expenses-column-hint">Stvarno unijeti troškovi koji se računaju u budžet.</p>
+        <p className="muted expenses-column-hint">Stvarno uneti troškovi koji se računaju u budžet.</p>
         <ExpenseList
           expenses={expenses}
           onDelete={readOnly ? undefined : onDeleteExpense}
@@ -25,9 +25,9 @@ export default function ExpensesSection({
       </section>
 
       <section className="expenses-column">
-        <h3>Procijenjeni troškovi</h3>
+        <h3>Procenjeni troškovi</h3>
         <p className="muted expenses-column-hint">
-          Automatski iz aktivnosti — dodaj procijenjeni iznos u sekciji Aktivnosti.
+          Automatski iz aktivnosti — dodaj procenjeni iznos u sekciji Aktivnosti.
         </p>
         <EstimatedExpenseList activities={activities} />
       </section>

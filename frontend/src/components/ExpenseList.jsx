@@ -1,3 +1,5 @@
+import { getExpenseCategoryLabel } from '../models/Expense';
+
 export default function ExpenseList({ expenses, onDelete, readOnly = false }) {
   if (expenses.length === 0) {
     return <p className="muted">Nema unetih troškova.</p>;
@@ -9,7 +11,7 @@ export default function ExpenseList({ expenses, onDelete, readOnly = false }) {
         <li key={expense.id} className="item-row">
           <div>
             <strong>{expense.name}</strong>
-            <span className="badge">{expense.category}</span>
+            <span className="badge">{getExpenseCategoryLabel(expense.category)}</span>
             <p className="muted">{expense.expenseDate} · {expense.amount.toFixed(2)} €</p>
             {expense.description && <p>{expense.description}</p>}
           </div>

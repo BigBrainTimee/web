@@ -50,7 +50,7 @@ public static class ExpenseMapper
     {
         if (!ValidCategories.Contains(category))
         {
-            throw new ArgumentException("Invalid expense category.");
+            throw new ArgumentException("Neispravna kategorija troška.");
         }
 
         return ValidCategories.First(c => c.Equals(category, StringComparison.OrdinalIgnoreCase));

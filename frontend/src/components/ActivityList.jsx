@@ -25,7 +25,7 @@ export default function ActivityList({
           <strong>{activity.name}</strong>
           {activity.activityTime && <p className="muted">Vreme: {activity.activityTime}</p>}
           {activity.estimatedCost != null && activity.estimatedCost > 0 && (
-            <p className="muted">Procijenjeno: {activity.estimatedCost} €</p>
+            <p className="muted">Procenjeno: {activity.estimatedCost} €</p>
           )}
           {activity.description && <p>{activity.description}</p>}
         </div>

@@ -25,7 +25,7 @@ public class UserAuthService : IUserAuthService
 
         if (emailExists)
         {
-            throw new InvalidOperationException("A user with this email already exists.");
+            throw new InvalidOperationException("Korisnik sa ovim emailom već postoji.");
         }
 
         var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
@@ -46,7 +46,7 @@ public class UserAuthService : IUserAuthService
 
         if (user is null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
         {
-            throw new UnauthorizedAccessException("Invalid email or password.");
+            throw new UnauthorizedAccessException("Pogrešan email ili lozinka.");
         }
 
         return BuildAuthResponse(user);
@@ -91,7 +91,7 @@ public class UserAuthService : IUserAuthService
 
         if (emailExists)
         {
-            throw new InvalidOperationException("A user with this email already exists.");
+            throw new InvalidOperationException("Korisnik sa ovim emailom već postoji.");
         }
 
         var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
@@ -111,7 +111,7 @@ public class UserAuthService : IUserAuthService
     {
         if (adminUserId == targetUserId)
         {
-            throw new InvalidOperationException("You cannot change your own role.");
+            throw new InvalidOperationException("Ne možeš menjati sopstvenu ulogu.");
         }
 
         var role = UserMapper.NormalizeRole(dto.Role);
@@ -134,7 +134,7 @@ public class UserAuthService : IUserAuthService
     {
         if (adminUserId == targetUserId)
         {
-            throw new InvalidOperationException("You cannot delete your own account.");
+            throw new InvalidOperationException("Ne možeš obrisati sopstveni nalog.");
         }
 
         var user = await _dbContext.Users

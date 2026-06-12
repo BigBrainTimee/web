@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { CUSTOM_PACKING_SORT_ORDER } from '../constants/checklistDefaults';
 
 export default function ChecklistForm({ onSubmit }) {
   const [title, setTitle] = useState('');
@@ -7,11 +8,11 @@ export default function ChecklistForm({ onSubmit }) {
   async function handleSubmit(event) {
     event.preventDefault();
     if (!title.trim()) {
-      setError('Naslov je obavezan.');
+      setError('Unesi naziv stavke.');
       return;
     }
 
-    await onSubmit({ title: title.trim(), sortOrder: 0 });
+    await onSubmit({ title: title.trim(), sortOrder: CUSTOM_PACKING_SORT_ORDER });
     setTitle('');
     setError('');
   }
@@ -19,11 +20,12 @@ export default function ChecklistForm({ onSubmit }) {
   return (
     <form className="checklist-form" onSubmit={handleSubmit}>
       <input
-        placeholder="npr. Pasoš, Karta, Punjač..."
+        placeholder="npr. Lekovi, Kišobran, Adapter..."
         value={title}
         onChange={(e) => { setTitle(e.target.value); setError(''); }}
+        aria-label="Dodatna stavka za pakovanje"
       />
-      <button type="submit" className="btn btn-primary">Dodaj</button>
+      <button type="submit" className="btn btn-primary">Dodaj u Ostalo</button>
       {error && <span className="field-error">{error}</span>}
     </form>
   );

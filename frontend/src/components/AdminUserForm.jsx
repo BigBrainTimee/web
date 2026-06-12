@@ -72,8 +72,8 @@ export default function AdminUserForm({ onSubmit }) {
         <label>
           Uloga
           <select name="role" value={form.role} onChange={handleChange}>
-            <option value="User">User</option>
-            <option value="Admin">Admin</option>
+            <option value="User">Korisnik</option>
+            <option value="Admin">Administrator</option>
           </select>
         </label>
       </div>

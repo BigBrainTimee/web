@@ -32,3 +32,16 @@ export const EXPENSE_CATEGORIES = [
   'Shopping',
   'Other',
 ];
+
+export const EXPENSE_CATEGORY_LABELS = {
+  Transport: 'Prevoz',
+  Accommodation: 'Smeštaj',
+  Food: 'Hrana',
+  Tickets: 'Karte',
+  Shopping: 'Kupovina',
+  Other: 'Ostalo',
+};
+
+export function getExpenseCategoryLabel(category) {
+  return EXPENSE_CATEGORY_LABELS[category] ?? category;
+}

@@ -29,87 +29,97 @@ export async function deleteShareLink(token, planId, linkId) {
   });
 }
 
-export async function getSharedPlan(shareToken) {
-  const data = await apiRequest(`${SHARED_BASE}/${shareToken}`);
+export async function getSharedPlan(shareToken, authToken) {
+  const data = await apiRequest(`${SHARED_BASE}/${shareToken}`, { token: authToken });
   return mapSharedPlan(data);
 }
 
-export async function addSharedDestination(shareToken, payload) {
+export async function addSharedDestination(shareToken, payload, authToken) {
   const data = await apiRequest(`${SHARED_BASE}/${shareToken}/destinations`, {
     method: 'POST',
+    token: authToken,
     body: payload,
   });
   return mapDestination(data);
 }
 
-export async function deleteSharedDestination(shareToken, destinationId) {
+export async function deleteSharedDestination(shareToken, destinationId, authToken) {
   return apiRequest(`${SHARED_BASE}/${shareToken}/destinations/${destinationId}`, {
     method: 'DELETE',
+    token: authToken,
   });
 }
 
-export async function updateSharedDestination(shareToken, destinationId, payload) {
+export async function updateSharedDestination(shareToken, destinationId, payload, authToken) {
   const data = await apiRequest(`${SHARED_BASE}/${shareToken}/destinations/${destinationId}`, {
     method: 'PUT',
+    token: authToken,
     body: payload,
   });
   return mapDestination(data);
 }
 
-export async function addSharedActivity(shareToken, payload) {
+export async function addSharedActivity(shareToken, payload, authToken) {
   const data = await apiRequest(`${SHARED_BASE}/${shareToken}/activities`, {
     method: 'POST',
+    token: authToken,
     body: payload,
   });
   return mapActivity(data);
 }
 
-export async function deleteSharedActivity(shareToken, activityId) {
+export async function deleteSharedActivity(shareToken, activityId, authToken) {
   return apiRequest(`${SHARED_BASE}/${shareToken}/activities/${activityId}`, {
     method: 'DELETE',
+    token: authToken,
   });
 }
 
-export async function updateSharedActivity(shareToken, activityId, payload) {
+export async function updateSharedActivity(shareToken, activityId, payload, authToken) {
   const data = await apiRequest(`${SHARED_BASE}/${shareToken}/activities/${activityId}`, {
     method: 'PUT',
+    token: authToken,
     body: payload,
   });
   return mapActivity(data);
 }
 
-export async function addSharedExpense(shareToken, payload) {
+export async function addSharedExpense(shareToken, payload, authToken) {
   const data = await apiRequest(`${SHARED_BASE}/${shareToken}/expenses`, {
     method: 'POST',
+    token: authToken,
     body: payload,
   });
   return mapExpense(data);
 }
 
-export async function deleteSharedExpense(shareToken, expenseId) {
+export async function deleteSharedExpense(shareToken, expenseId, authToken) {
   return apiRequest(`${SHARED_BASE}/${shareToken}/expenses/${expenseId}`, {
     method: 'DELETE',
+    token: authToken,
   });
 }
 
-export async function addSharedChecklistItem(shareToken, payload) {
+export async function addSharedChecklistItem(shareToken, payload, authToken) {
   const data = await apiRequest(`${SHARED_BASE}/${shareToken}/checklist-items`, {
     method: 'POST',
+    token: authToken,
     body: payload,
   });
   return mapChecklistItem(data);
 }
 
-export async function toggleSharedChecklistItem(shareToken, itemId) {
+export async function toggleSharedChecklistItem(shareToken, itemId, authToken) {
   const data = await apiRequest(`${SHARED_BASE}/${shareToken}/checklist-items/${itemId}/toggle`, {
     method: 'PATCH',
+    token: authToken,
   });
   return mapChecklistItem(data);
 }
 
-export async function deleteSharedChecklistItem(shareToken, itemId) {
+export async function deleteSharedChecklistItem(shareToken, itemId, authToken) {
   return apiRequest(`${SHARED_BASE}/${shareToken}/checklist-items/${itemId}`, {
     method: 'DELETE',
+    token: authToken,
   });
 }
-

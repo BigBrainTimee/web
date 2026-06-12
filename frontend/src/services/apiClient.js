@@ -1,3 +1,5 @@
+import { translateApiMessage } from '../utils/apiMessages';
+
 const API_URL = import.meta.env.VITE_API_URL;
 
 export class ApiError extends Error {
@@ -13,14 +15,14 @@ async function parseError(response) {
   try {
     const data = await response.json();
     if (data.message) {
-      return data.message;
+      return translateApiMessage(data.message);
     }
     if (data.title && data.errors) {
-      return Object.values(data.errors).flat().join(' ');
+      return translateApiMessage(Object.values(data.errors).flat().join(' '));
     }
-    return data.title || 'Request failed.';
+    return translateApiMessage(data.title || 'Request failed.');
   } catch {
-    return 'Request failed.';
+    return translateApiMessage('Request failed.');
   }
 }
 

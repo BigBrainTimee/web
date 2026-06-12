@@ -64,7 +64,7 @@ public class TravelPlansController : ControllerBase
         }
 
         var pdfBytes = _planReportPdfGenerator.Generate(report);
-        var fileName = $"plan-{id}-izvjestaj.pdf";
+        var fileName = $"plan-{id}-izvestaj.pdf";
         return File(pdfBytes, "application/pdf", fileName);
     }
 

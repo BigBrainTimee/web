@@ -92,5 +92,7 @@ export function createSharedPlan(data) {
 }
 
 export function buildShareUrl(token) {
-  return `${window.location.origin}/shared/${token}`;
+  const configuredBase = import.meta.env.VITE_SHARE_BASE_URL?.replace(/\/$/, '');
+  const base = configuredBase || window.location.origin;
+  return `${base}/shared/${token}`;
 }

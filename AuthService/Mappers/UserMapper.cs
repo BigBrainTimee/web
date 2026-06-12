@@ -39,7 +39,7 @@ public static class UserMapper
         if (!role.Equals("User", StringComparison.OrdinalIgnoreCase)
             && !role.Equals("Admin", StringComparison.OrdinalIgnoreCase))
         {
-            throw new ArgumentException("Invalid role. Use User or Admin.");
+            throw new ArgumentException("Neispravna uloga.");
         }
 
         return role.Equals("Admin", StringComparison.OrdinalIgnoreCase) ? "Admin" : "User";

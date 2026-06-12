@@ -40,7 +40,7 @@ public static class ShareLinkMapper
     {
         if (!ValidAccessTypes.Contains(accessType))
         {
-            throw new ArgumentException("Invalid access type. Use View or Edit.");
+            throw new ArgumentException("Neispravan tip pristupa.");
         }
 
         return ValidAccessTypes.First(t => t.Equals(accessType, StringComparison.OrdinalIgnoreCase));

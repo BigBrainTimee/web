@@ -72,7 +72,7 @@ export default function AdminUsersPage() {
     <div className="page">
       <div className="page-header">
         <div>
-          <h1>Admin — korisnici</h1>
+          <h1>Administracija — korisnici</h1>
           <p className="muted">Upravljanje nalozima i ulogama u sistemu.</p>
         </div>
       </div>
@@ -109,8 +109,8 @@ export default function AdminUsersPage() {
                         value={user.role}
                         onChange={(e) => handleRoleChange(user.id, e.target.value)}
                       >
-                        <option value="User">User</option>
-                        <option value="Admin">Admin</option>
+                        <option value="User">Korisnik</option>
+                        <option value="Admin">Administrator</option>
                       </select>
                     )}
                   </td>

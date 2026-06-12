@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ServiceManifest Name="TravelServicePkg" Version="1.0.0" xmlns="http://schemas.microsoft.com/2011/01/fabric" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ManifestId="c3d4e5f6-a7b8-9012-cdef-123456789012">
   <ServiceTypes>
-    <StatefulServiceType ServiceTypeName="TravelServiceType" HasPersistedState="true" />
+    <StatefulServiceType ServiceTypeName="TravelServiceType" HasPersistedState="false" />
   </ServiceTypes>
   <CodePackage Name="Code" Version="1.0.0">
     <EntryPoint>

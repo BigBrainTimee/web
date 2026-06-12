@@ -1,6 +1,12 @@
-export default function ChecklistList({ items, onToggle, onDelete, readOnly = false }) {
+export default function ChecklistList({
+  items,
+  onToggle,
+  onDelete,
+  readOnly = false,
+  emptyMessage = 'Nema stavki.',
+}) {
   if (items.length === 0) {
-    return <p className="muted">Checklist je prazna.</p>;
+    return <p className="muted">{emptyMessage}</p>;
   }
 
   return (

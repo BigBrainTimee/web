@@ -13,9 +13,6 @@ namespace TravelService.Controllers;
 
 
 [ApiController]
-
-[AllowAnonymous]
-
 [Route("api/travel/shared/{token}")]
 
 public class SharedPlansController : ControllerBase
@@ -36,24 +33,29 @@ public class SharedPlansController : ControllerBase
 
 
 
+    [AllowAnonymous]
     [HttpGet]
-
     public async Task<ActionResult<SharedPlanResponseDto>> GetByToken(string token, CancellationToken cancellationToken)
-
     {
-
         var plan = await _travelPlanService.GetSharedPlanAsync(token, cancellationToken);
 
-        return plan is null
+        if (plan is null)
+        {
+            return NotFound(new { message = "Link za deljenje nije pronađen ili je istekao." });
+        }
 
-            ? NotFound(new { message = "Share link not found or expired." })
+        if (plan.CanEdit && !(User.Identity?.IsAuthenticated ?? false))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden,
+                new { message = "Morate biti prijavljeni da biste koristili link za izmenu." });
+        }
 
-            : Ok(plan);
-
+        return Ok(plan);
     }
 
 
 
+    [Authorize]
     [HttpPost("destinations")]
 
     public async Task<ActionResult<DestinationResponseDto>> AddDestination(
@@ -96,6 +98,7 @@ public class SharedPlansController : ControllerBase
 
 
 
+    [Authorize]
     [HttpPut("destinations/{destinationId:int}")]
 
     public async Task<ActionResult<DestinationResponseDto>> UpdateDestination(
@@ -140,6 +143,7 @@ public class SharedPlansController : ControllerBase
 
 
 
+    [Authorize]
     [HttpDelete("destinations/{destinationId:int}")]
 
     public async Task<IActionResult> DeleteDestination(string token, int destinationId, CancellationToken cancellationToken)
@@ -158,6 +162,7 @@ public class SharedPlansController : ControllerBase
 
 
 
+    [Authorize]
     [HttpPost("activities")]
 
     public async Task<ActionResult<ActivityResponseDto>> AddActivity(
@@ -200,6 +205,7 @@ public class SharedPlansController : ControllerBase
 
 
 
+    [Authorize]
     [HttpPut("activities/{activityId:int}")]
 
     public async Task<ActionResult<ActivityResponseDto>> UpdateActivity(
@@ -244,6 +250,7 @@ public class SharedPlansController : ControllerBase
 
 
 
+    [Authorize]
     [HttpDelete("activities/{activityId:int}")]
 
     public async Task<IActionResult> DeleteActivity(string token, int activityId, CancellationToken cancellationToken)
@@ -262,6 +269,7 @@ public class SharedPlansController : ControllerBase
 
 
 
+    [Authorize]
     [HttpPost("expenses")]
 
     public async Task<ActionResult<ExpenseResponseDto>> AddExpense(
@@ -304,6 +312,7 @@ public class SharedPlansController : ControllerBase
 
 
 
+    [Authorize]
     [HttpDelete("expenses/{expenseId:int}")]
 
     public async Task<IActionResult> DeleteExpense(string token, int expenseId, CancellationToken cancellationToken)
@@ -322,6 +331,7 @@ public class SharedPlansController : ControllerBase
 
 
 
+    [Authorize]
     [HttpPost("checklist-items")]
 
     public async Task<ActionResult<ChecklistItemResponseDto>> AddChecklistItem(
@@ -356,6 +366,7 @@ public class SharedPlansController : ControllerBase
 
 
 
+    [Authorize]
     [HttpPatch("checklist-items/{itemId:int}/toggle")]
 
     public async Task<ActionResult<ChecklistItemResponseDto>> ToggleChecklistItem(
@@ -380,6 +391,7 @@ public class SharedPlansController : ControllerBase
 
 
 
+    [Authorize]
     [HttpDelete("checklist-items/{itemId:int}")]
 
     public async Task<IActionResult> DeleteChecklistItem(string token, int itemId, CancellationToken cancellationToken)
