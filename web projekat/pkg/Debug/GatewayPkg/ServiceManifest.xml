@@ -1,9 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ServiceManifest Name="GatewayPkg" Version="1.0.0" xmlns="http://schemas.microsoft.com/2011/01/fabric" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ManifestId="a1b2c3d4-e5f6-7890-abcd-ef1234567890">
+<ServiceManifest Name="GatewayPkg" Version="1.0.1" xmlns="http://schemas.microsoft.com/2011/01/fabric" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ManifestId="a1b2c3d4-e5f6-7890-abcd-ef1234567890">
   <ServiceTypes>
     <StatelessServiceType ServiceTypeName="GatewayType" />
   </ServiceTypes>
-  <CodePackage Name="Code" Version="1.0.0">
+  <CodePackage Name="Code" Version="1.0.1">
     <EntryPoint>
       <ExeHost>
         <Program>Gateway.exe</Program>
