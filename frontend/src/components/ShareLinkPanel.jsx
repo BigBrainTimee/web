@@ -5,7 +5,8 @@ import { ApiError } from '../services/apiClient';
 import { getAccessTypeLabel } from '../utils/accessTypes';
 import * as shareService from '../services/shareService';
 
-export default function ShareLinkPanel({ authToken, planId }) {
+export default function ShareLinkPanel({ authToken, planId, shareApi }) {
+  const api = shareApi ?? shareService;
   const [links, setLinks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -17,7 +18,7 @@ export default function ShareLinkPanel({ authToken, planId }) {
     setLoading(true);
     setError('');
     try {
-      const data = await shareService.getShareLinks(authToken, planId);
+      const data = await api.getShareLinks(authToken, planId);
       setLinks(data);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Učitavanje linkova nije uspelo.');
@@ -35,7 +36,7 @@ export default function ShareLinkPanel({ authToken, planId }) {
     setError('');
 
     try {
-      await shareService.createShareLink(authToken, planId, {
+      await api.createShareLink(authToken, planId, {
         accessType,
         expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
       });
@@ -50,7 +51,7 @@ export default function ShareLinkPanel({ authToken, planId }) {
     if (!window.confirm('Obrisati link za deljenje?')) return;
 
     try {
-      await shareService.deleteShareLink(authToken, planId, linkId);
+      await api.deleteShareLink(authToken, planId, linkId);
       await loadLinks();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Brisanje linka nije uspelo.');

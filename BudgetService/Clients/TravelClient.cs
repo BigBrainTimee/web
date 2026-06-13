@@ -37,6 +37,43 @@ public sealed class TravelClient : ITravelClient
         return plan is null ? null : ToContext(plan);
     }
 
+    public async Task<PlanBudgetContext?> GetAdminPlanContextAsync(
+        int userId,
+        int planId,
+        CancellationToken cancellationToken = default)
+    {
+        using var request = CreateRequest(HttpMethod.Get, $"/api/travel/admin/users/{userId}/travel-plans/{planId}");
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        response.EnsureSuccessStatusCode();
+        var plan = await response.Content.ReadFromJsonAsync<TravelPlanApiDto>(cancellationToken: cancellationToken);
+        return plan is null ? null : ToContext(plan);
+    }
+
+    public async Task<decimal> GetAdminEstimatedActivityTotalAsync(
+        int userId,
+        int planId,
+        CancellationToken cancellationToken = default)
+    {
+        using var request = CreateRequest(HttpMethod.Get, $"/api/travel/admin/users/{userId}/travel-plans/{planId}/activities");
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            return 0;
+        }
+
+        var activities = await response.Content.ReadFromJsonAsync<List<ActivityApiDto>>(cancellationToken: cancellationToken)
+            ?? new List<ActivityApiDto>();
+
+        return activities.Where(a => a.EstimatedCost.HasValue).Sum(a => a.EstimatedCost ?? 0);
+    }
+
     public async Task<decimal> GetEstimatedActivityTotalAsync(int planId, CancellationToken cancellationToken = default)
     {
         using var request = CreateRequest(HttpMethod.Get, $"/api/travel/travel-plans/{planId}/activities");

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import DatePickerField from './DatePickerField';
 
 const emptyForm = {
   name: '',
@@ -47,7 +48,24 @@ export default function DestinationForm({
 
   function handleChange(event) {
     const { name, value } = event.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm((prev) => {
+      const next = { ...prev, [name]: value };
+      if (name === 'arrivalDate' && next.departureDate && value && next.departureDate < value) {
+        next.departureDate = '';
+      }
+      return next;
+    });
+    setErrors((prev) => ({ ...prev, [name]: '' }));
+  }
+
+  function handleDateChange(name, value) {
+    setForm((prev) => {
+      const next = { ...prev, [name]: value };
+      if (name === 'arrivalDate' && next.departureDate && value && next.departureDate < value) {
+        next.departureDate = '';
+      }
+      return next;
+    });
     setErrors((prev) => ({ ...prev, [name]: '' }));
   }
 
@@ -114,31 +132,26 @@ export default function DestinationForm({
       </label>
 
       <div className="form-row">
-        <label>
-          Dolazak
-          <input
-            type="date"
-            name="arrivalDate"
-            value={form.arrivalDate}
-            onChange={handleChange}
-            min={planStartDate ?? undefined}
-            max={planEndDate ?? undefined}
-            readOnly={Boolean(fixedArrivalDate && !isEditing)}
-          />
-          {errors.arrivalDate && <span className="field-error">{errors.arrivalDate}</span>}
-        </label>
-        <label>
-          Odlazak
-          <input
-            type="date"
-            name="departureDate"
-            value={form.departureDate}
-            onChange={handleChange}
-            min={form.arrivalDate || planStartDate || undefined}
-            max={planEndDate ?? undefined}
-          />
-          {errors.departureDate && <span className="field-error">{errors.departureDate}</span>}
-        </label>
+        <DatePickerField
+          name="arrivalDate"
+          label="Dolazak"
+          value={form.arrivalDate}
+          onChange={(value) => handleDateChange('arrivalDate', value)}
+          error={errors.arrivalDate}
+          minDate={planStartDate ?? undefined}
+          maxDate={planEndDate ?? undefined}
+          readOnly={Boolean(fixedArrivalDate && !isEditing)}
+        />
+        <DatePickerField
+          name="departureDate"
+          label="Odlazak"
+          value={form.departureDate}
+          onChange={(value) => handleDateChange('departureDate', value)}
+          error={errors.departureDate}
+          minDate={form.arrivalDate || planStartDate || undefined}
+          maxDate={planEndDate ?? undefined}
+          openToDate={form.arrivalDate || undefined}
+        />
       </div>
 
       <label>

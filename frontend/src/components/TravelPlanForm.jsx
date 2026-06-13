@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import DatePickerField from './DatePickerField';
 
 const emptyForm = {
   name: '',
@@ -15,7 +16,24 @@ export default function TravelPlanForm({ initialValues, onSubmit, submitLabel })
 
   function handleChange(event) {
     const { name, value } = event.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm((prev) => {
+      const next = { ...prev, [name]: value };
+      if (name === 'startDate' && next.endDate && value && next.endDate < value) {
+        next.endDate = '';
+      }
+      return next;
+    });
+    setErrors((prev) => ({ ...prev, [name]: '' }));
+  }
+
+  function handleDateChange(name, value) {
+    setForm((prev) => {
+      const next = { ...prev, [name]: value };
+      if (name === 'startDate' && next.endDate && value && next.endDate < value) {
+        next.endDate = '';
+      }
+      return next;
+    });
     setErrors((prev) => ({ ...prev, [name]: '' }));
   }
 
@@ -64,16 +82,23 @@ export default function TravelPlanForm({ initialValues, onSubmit, submitLabel })
       </label>
 
       <div className="form-row">
-        <label>
-          Početak
-          <input type="date" name="startDate" value={form.startDate} onChange={handleChange} />
-          {errors.startDate && <span className="field-error">{errors.startDate}</span>}
-        </label>
-        <label>
-          Kraj
-          <input type="date" name="endDate" value={form.endDate} onChange={handleChange} />
-          {errors.endDate && <span className="field-error">{errors.endDate}</span>}
-        </label>
+        <DatePickerField
+          name="startDate"
+          label="Početak"
+          value={form.startDate}
+          onChange={(value) => handleDateChange('startDate', value)}
+          error={errors.startDate}
+          maxDate={form.endDate || undefined}
+        />
+        <DatePickerField
+          name="endDate"
+          label="Kraj"
+          value={form.endDate}
+          onChange={(value) => handleDateChange('endDate', value)}
+          error={errors.endDate}
+          minDate={form.startDate || undefined}
+          openToDate={form.startDate || undefined}
+        />
       </div>
 
       <label>

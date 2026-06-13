@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import AdminUserForm from '../components/AdminUserForm';
 import AlertMessage from '../components/AlertMessage';
@@ -118,17 +119,24 @@ export default function AdminUsersPage() {
                   </td>
                   <td>{new Date(user.createdAt).toLocaleString('sr-RS')}</td>
                   <td>
-                    {isSelf ? (
-                      <span className="muted">Tvoj nalog</span>
-                    ) : (
-                      <button
-                        type="button"
-                        className="btn btn-danger btn-sm"
-                        onClick={() => handleDelete(user.id, user.fullName || user.name)}
+                    <div className="admin-actions">
+                      <Link
+                        to={`/admin/users/${user.id}/plans`}
+                        className="btn btn-secondary btn-sm"
                       >
-                        Obriši
-                      </button>
-                    )}
+                        Planovi
+                      </Link>
+                      {!isSelf && (
+                        <button
+                          type="button"
+                          className="btn btn-danger btn-sm"
+                          onClick={() => handleDelete(user.id, user.fullName || user.name)}
+                        >
+                          Obriši
+                        </button>
+                      )}
+                      {isSelf && <span className="muted">Tvoj nalog</span>}
+                    </div>
                   </td>
                 </tr>
               );

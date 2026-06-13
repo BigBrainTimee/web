@@ -3,6 +3,7 @@ import AdminRoute from './components/AdminRoute';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
+import AdminUserPlansPage from './pages/AdminUserPlansPage';
 import AdminUsersPage from './pages/AdminUsersPage';
 import CreateTravelPlanPage from './pages/CreateTravelPlanPage';
 import LoginPage from './pages/LoginPage';
@@ -41,6 +42,14 @@ export default function App() {
             element={(
               <AdminRoute>
                 <AdminUsersPage />
+              </AdminRoute>
+            )}
+          />
+          <Route
+            path="/admin/users/:userId/plans"
+            element={(
+              <AdminRoute>
+                <AdminUserPlansPage />
               </AdminRoute>
             )}
           />

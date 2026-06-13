@@ -11,6 +11,12 @@ public interface IBudgetService
     Task<bool> DeleteExpenseAsync(int userId, int planId, int expenseId, CancellationToken cancellationToken = default);
     Task<BudgetSummaryDto?> GetSummaryAsync(int userId, int planId, CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<ExpenseResponseDto>> GetAdminExpensesAsync(int userId, int planId, CancellationToken cancellationToken = default);
+    Task<BudgetSummaryDto?> GetAdminSummaryAsync(int userId, int planId, CancellationToken cancellationToken = default);
+    Task<ExpenseResponseDto?> AddAdminExpenseAsync(int userId, int planId, CreateExpenseDto dto, CancellationToken cancellationToken = default);
+    Task<ExpenseResponseDto?> UpdateAdminExpenseAsync(int userId, int planId, int expenseId, UpdateExpenseDto dto, CancellationToken cancellationToken = default);
+    Task<bool> DeleteAdminExpenseAsync(int userId, int planId, int expenseId, CancellationToken cancellationToken = default);
+
     Task<BudgetSummaryDto?> GetSharedSummaryAsync(string token, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ExpenseResponseDto>?> GetSharedExpensesAsync(string token, CancellationToken cancellationToken = default);
     Task<ExpenseResponseDto?> AddSharedExpenseAsync(string token, CreateExpenseDto dto, CancellationToken cancellationToken = default);

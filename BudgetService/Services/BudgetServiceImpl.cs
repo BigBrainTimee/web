@@ -112,6 +112,109 @@ public class BudgetServiceImpl : IBudgetService
         return await BuildSummaryAsync(plan, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<ExpenseResponseDto>> GetAdminExpensesAsync(
+        int userId,
+        int planId,
+        CancellationToken cancellationToken = default)
+    {
+        var plan = await _travelClient.GetAdminPlanContextAsync(userId, planId, cancellationToken);
+        if (plan is null)
+        {
+            return Array.Empty<ExpenseResponseDto>();
+        }
+
+        return await GetExpensesByPlanIdAsync(planId, cancellationToken);
+    }
+
+    public async Task<BudgetSummaryDto?> GetAdminSummaryAsync(
+        int userId,
+        int planId,
+        CancellationToken cancellationToken = default)
+    {
+        var plan = await _travelClient.GetAdminPlanContextAsync(userId, planId, cancellationToken);
+        if (plan is null)
+        {
+            return null;
+        }
+
+        return await BuildAdminSummaryAsync(plan, userId, cancellationToken);
+    }
+
+    public async Task<ExpenseResponseDto?> AddAdminExpenseAsync(
+        int userId,
+        int planId,
+        CreateExpenseDto dto,
+        CancellationToken cancellationToken = default)
+    {
+        var plan = await _travelClient.GetAdminPlanContextAsync(userId, planId, cancellationToken);
+        if (plan is null)
+        {
+            return null;
+        }
+
+        ValidateExpenseDate(dto.ExpenseDate, plan.StartDate, plan.EndDate);
+
+        var expense = ExpenseMapper.ToEntity(dto, planId);
+        _dbContext.Expenses.Add(expense);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return ExpenseMapper.ToResponseDto(expense);
+    }
+
+    public async Task<ExpenseResponseDto?> UpdateAdminExpenseAsync(
+        int userId,
+        int planId,
+        int expenseId,
+        UpdateExpenseDto dto,
+        CancellationToken cancellationToken = default)
+    {
+        var plan = await _travelClient.GetAdminPlanContextAsync(userId, planId, cancellationToken);
+        if (plan is null)
+        {
+            return null;
+        }
+
+        var expense = await _dbContext.Expenses
+            .FirstOrDefaultAsync(e => e.Id == expenseId && e.TravelPlanId == planId, cancellationToken);
+
+        if (expense is null)
+        {
+            return null;
+        }
+
+        ValidateExpenseDate(dto.ExpenseDate, plan.StartDate, plan.EndDate);
+
+        ExpenseMapper.ApplyUpdate(expense, dto);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return ExpenseMapper.ToResponseDto(expense);
+    }
+
+    public async Task<bool> DeleteAdminExpenseAsync(
+        int userId,
+        int planId,
+        int expenseId,
+        CancellationToken cancellationToken = default)
+    {
+        var plan = await _travelClient.GetAdminPlanContextAsync(userId, planId, cancellationToken);
+        if (plan is null)
+        {
+            return false;
+        }
+
+        var expense = await _dbContext.Expenses
+            .FirstOrDefaultAsync(e => e.Id == expenseId && e.TravelPlanId == planId, cancellationToken);
+
+        if (expense is null)
+        {
+            return false;
+        }
+
+        _dbContext.Expenses.Remove(expense);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
     public async Task<BudgetSummaryDto?> GetSharedSummaryAsync(string token, CancellationToken cancellationToken = default)
     {
         var plan = await _travelClient.GetSharedPlanContextAsync(token, requireEdit: false, cancellationToken);
@@ -205,6 +308,39 @@ public class BudgetServiceImpl : IBudgetService
         _dbContext.Expenses.Remove(expense);
         await _dbContext.SaveChangesAsync(cancellationToken);
         return true;
+    }
+
+    private async Task<BudgetSummaryDto> BuildAdminSummaryAsync(
+        PlanBudgetContext plan,
+        int userId,
+        CancellationToken cancellationToken)
+    {
+        var planId = plan.TravelPlanId;
+
+        var byCategory = await _dbContext.Expenses
+            .AsNoTracking()
+            .Where(e => e.TravelPlanId == planId)
+            .GroupBy(e => e.Category)
+            .Select(g => new CategorySummaryDto
+            {
+                Category = g.Key,
+                Amount = g.Sum(e => e.Amount)
+            })
+            .OrderBy(c => c.Category)
+            .ToListAsync(cancellationToken);
+
+        var totalSpent = byCategory.Sum(c => c.Amount);
+        var totalEstimated = await _travelClient.GetAdminEstimatedActivityTotalAsync(userId, planId, cancellationToken);
+
+        return new BudgetSummaryDto
+        {
+            TravelPlanId = planId,
+            PlannedBudget = plan.PlannedBudget,
+            TotalSpent = totalSpent,
+            TotalEstimated = totalEstimated,
+            Remaining = plan.PlannedBudget - totalSpent - totalEstimated,
+            ByCategory = byCategory
+        };
     }
 
     private async Task<BudgetSummaryDto> BuildSummaryAsync(PlanBudgetContext plan, CancellationToken cancellationToken)

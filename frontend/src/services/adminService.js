@@ -8,26 +8,18 @@ export async function getUsers(token) {
   return data.map(mapUser);
 }
 
+export async function getUser(token, userId) {
+  const data = await apiRequest(`${BASE}/${userId}`, { token });
+  return mapUser(data);
+}
+
 export async function addUser(token, payload) {
-  const { name, lastName, email, password, role } = payload;
-
-  const registered = await apiRequest('/api/auth/register', {
+  const data = await apiRequest(BASE, {
     method: 'POST',
-    body: { name, lastName, email, password },
+    token,
+    body: payload,
   });
-
-  const user = mapUser(registered.user);
-
-  if (role !== 'User') {
-    const updated = await apiRequest(`${BASE}/${user.id}/role`, {
-      method: 'PUT',
-      token,
-      body: { role },
-    });
-    return mapUser(updated);
-  }
-
-  return user;
+  return mapUser(data);
 }
 
 export async function updateUserRole(token, userId, role) {

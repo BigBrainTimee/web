@@ -157,6 +157,83 @@ textarea {
   gap: 1rem;
 }
 
+.date-picker-field {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  z-index: 1;
+}
+
+.date-picker-field:has(.date-picker-trigger[aria-expanded="true"]) {
+  z-index: 40;
+}
+
+.date-picker-field > label {
+  font-weight: 600;
+}
+
+.date-picker-trigger {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 0.7rem 0.8rem;
+  background: #fff;
+  text-align: left;
+  color: #111827;
+  cursor: pointer;
+}
+
+.date-picker-trigger.is-empty {
+  color: #6b7280;
+}
+
+.date-picker-trigger.has-error {
+  border-color: #dc2626;
+}
+
+.date-picker-trigger:disabled {
+  background: #f3f4f6;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+.date-picker-popover {
+  z-index: 1000;
+  padding: 0.85rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16);
+}
+
+.date-picker-calendar .month-calendar-toolbar {
+  margin-bottom: 0.75rem;
+}
+
+.date-picker-calendar .month-calendar-title {
+  font-size: 1rem;
+}
+
+.date-picker-calendar .month-calendar-grid {
+  gap: 0.25rem;
+}
+
+.date-picker-calendar button.month-calendar-cell {
+  width: 100%;
+  min-height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: inherit;
+  color: inherit;
+  text-align: center;
+}
+
+.date-picker-calendar .month-calendar-cell.out-of-range {
+  cursor: not-allowed;
+}
+
 .btn {
   border: none;
   border-radius: 8px;
@@ -1055,4 +1132,11 @@ select {
 .admin-table select {
   width: auto;
   min-width: 110px;
+}
+
+.admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
 }
